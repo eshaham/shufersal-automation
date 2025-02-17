@@ -52,7 +52,7 @@ export class ShufersalBot {
     if (!this.browser) {
       this.browser = await puppeteer.launch({
         executablePath: this.options.executablePath,
-        headless: !!this.options.headless,
+        headless: 'headless' in this.options ? this.options.headless : true,
       });
     }
   }
