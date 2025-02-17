@@ -15,12 +15,11 @@ if (!EXECUTABLE_PATH) {
 }
 
 async function automate(bot: ShufersalBot, username: string, password: string) {
-  const page = await bot.createPage();
-  await bot.login(page, username, password);
-  const orders = await bot.getOrders(page);
+  const session = await bot.createSession(username, password);
+  const orders = await session.getOrders();
   const lastOrder = orders.closedOrders[0];
   if (lastOrder) {
-    const orderDetails = await bot.getOrderDetails(page, lastOrder.code);
+    const orderDetails = await session.getOrderDetails(lastOrder.code);
     console.log(`Last order had ${orderDetails.entries.length} entries`);
   } else {
     console.log('No closed orders found');
