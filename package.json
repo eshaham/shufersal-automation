@@ -4,7 +4,7 @@
   "description": "A module to automate shufersal shopping",
   "main": "dist/index.js",
   "scripts": {
-    "start": "npx tsx src/index.ts"
+    "start": "cd src/example && npx tsx main.ts"
   },
   "repository": {
     "type": "git",
@@ -21,6 +21,7 @@
   "homepage": "https://github.com/eshaham/shufersal-automation#readme",
   "devDependencies": {
     "@types/node": "^22.13.4",
+    "dotenv": "^16.4.7",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3"
   },
