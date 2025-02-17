@@ -3,6 +3,7 @@ import puppeteer, { Browser } from 'puppeteer-core';
 
 interface ShufersalBotOptions {
   executablePath: string;
+  headless?: boolean;
 }
 
 export class ShufersalBot {
@@ -25,6 +26,7 @@ export class ShufersalBot {
     if (!this.browser) {
       this.browser = await puppeteer.launch({
         executablePath: this.options.executablePath,
+        headless: !!this.options.headless,
       });
     }
   }
