@@ -18,8 +18,13 @@ async function automate(bot: ShufersalBot, username: string, password: string) {
   const page = await bot.createPage();
   await bot.login(page, username, password);
   const orders = await bot.getOrders(page);
-  console.log(orders.closedOrders[0].totalPrice.value);
-  console.log(JSON.stringify(orders.closedOrders[0], null, 2));
+  const lastOrder = orders.closedOrders[0];
+  if (lastOrder) {
+    const orderDetails = await bot.getOrderDetails(page, lastOrder.code);
+    console.log(`Last order had ${orderDetails.entries.length} entries`);
+  } else {
+    console.log('No closed orders found');
+  }
 }
 
 (async () => {

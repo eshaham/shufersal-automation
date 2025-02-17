@@ -1,6 +1,6 @@
 import assert = require('assert');
 import puppeteer, { Browser, Page } from 'puppeteer-core';
-import { AccountOrders } from './types';
+import { AccountOrders, OrderDetails } from './types';
 
 interface ShufersalBotOptions {
   executablePath: string;
@@ -32,6 +32,14 @@ export class ShufersalBot {
 
   async getOrders(page: Page) {
     return this.apiRequest<AccountOrders>(page, 'GET', '/my-account/orders');
+  }
+
+  async getOrderDetails(page: Page, code: string) {
+    return this.apiRequest<OrderDetails>(
+      page,
+      'GET',
+      `/my-account/orders/${code}`
+    );
   }
 
   async terminate() {

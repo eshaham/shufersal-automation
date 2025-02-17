@@ -1,3 +1,5 @@
+// Order History
+
 export interface Price {
   currencyIso: string;
   value: number;
@@ -178,4 +180,86 @@ export interface Order {
 export interface AccountOrders {
   activeOrders: Order[];
   closedOrders: Order[];
+}
+
+// Order Details
+
+export interface ProductStock {
+  stockLevelStatus: Status;
+  stockLevel?: number | null;
+  stockThreshold?: number | null;
+  available?: number | null;
+  reserved?: number | null;
+  invMethod?: string | null;
+  inventoryManagement?: string | null;
+  inventoryOnTheWay?: number | null;
+  minimalThreshold1?: number | null;
+  minimalThreshold2?: number | null;
+  warehouse?: string | null;
+  productCode?: string | null;
+}
+
+export interface ProductImage {
+  imageType: string;
+  format: string;
+  url: string;
+  altText: string;
+  galleryIndex?: number;
+  code?: string;
+}
+
+export interface Product {
+  code: string;
+  name: string;
+  url: string;
+  description: string;
+  purchasable: boolean;
+  stock: ProductStock;
+  price: Price;
+  images: ProductImage[];
+  brand?: {
+    code: string;
+    name: string;
+  };
+  sku?: string;
+  deliveryItem: boolean;
+  food: boolean;
+}
+
+export interface OrderEntry {
+  entryNumber: number;
+  quantity: number;
+  basePrice: Price;
+  totalPrice: Price;
+  product: Product;
+  updateable: boolean;
+}
+
+export interface OrderDetails extends Order {
+  entries: OrderEntry[];
+  paymentType?: {
+    code: string;
+    displayName?: string | null;
+  };
+  b2bCustomerData?: {
+    uid: string;
+    name: string;
+    profilePicture?: string | null;
+    defaultBillingAddress?: Address;
+    defaultShippingAddress?: Address;
+    firstName: string;
+    lastName: string;
+    currency?: {
+      isocode: string;
+      name: string;
+      symbol: string;
+    };
+    language?: {
+      isocode: string;
+      name: string;
+    };
+    contactNumber?: string;
+  };
+  deliveredDate?: number;
+  deliveredDateString?: string;
 }
