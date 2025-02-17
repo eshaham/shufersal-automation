@@ -12,6 +12,7 @@
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
     "declaration": true,
+    "esModuleInterop": true,
     "types": ["node"],
     "baseUrl": ".",
     "paths": {

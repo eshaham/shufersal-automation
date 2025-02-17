@@ -1,5 +1,7 @@
-import assert = require('assert');
+import assert from 'assert';
+
 import puppeteer, { Browser, Page } from 'puppeteer-core';
+
 import { AccountOrders, OrderDetails } from './types';
 
 interface ShufersalBotOptions {
@@ -16,7 +18,7 @@ export class ShufersalSession {
     return this.apiRequest<AccountOrders>(
       this.page,
       'GET',
-      '/my-account/orders'
+      '/my-account/orders',
     );
   }
 
@@ -24,7 +26,7 @@ export class ShufersalSession {
     return this.apiRequest<OrderDetails>(
       this.page,
       'GET',
-      `/my-account/orders/${code}`
+      `/my-account/orders/${code}`,
     );
   }
 
@@ -43,7 +45,7 @@ export class ShufersalSession {
         return data;
       },
       `${BASE_URL}${path}`,
-      method
+      method,
     );
     return data as T;
   }
