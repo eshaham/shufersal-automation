@@ -9,8 +9,14 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "noPropertyAccessFromIndexSignature": true,
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
     "declaration": true,
-    "types": ["node"]
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@shufersal-automation": ["src/index.ts"]
+    }
   },
   "include": ["src/**/*.ts"]
 }
