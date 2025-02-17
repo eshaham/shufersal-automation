@@ -34,6 +34,12 @@ export class ShufersalBot {
     return this.apiRequest<AccountOrders>(page, 'GET', '/my-account/orders');
   }
 
+  async terminate() {
+    assert(this.browser);
+    await this.browser.close();
+    this.browser = undefined;
+  }
+
   private async initIfNeeded() {
     if (!this.browser) {
       this.browser = await puppeteer.launch({
