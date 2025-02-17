@@ -1,0 +1,27 @@
+{
+  "name": "shufersal-automation",
+  "version": "1.0.0",
+  "description": "A module to automate shufersal shopping",
+  "main": "dist/index.js",
+  "scripts": {
+    "start": "npx tsx src/index.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eshaham/shufersal-automation.git"
+  },
+  "keywords": [
+    "shufersal"
+  ],
+  "author": "Elad Shaham (elad.shaham.net)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/eshaham/shufersal-automation/issues"
+  },
+  "homepage": "https://github.com/eshaham/shufersal-automation#readme",
+  "devDependencies": {
+    "@types/node": "^22.13.4",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}
