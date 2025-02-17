@@ -26,7 +26,7 @@ async function automate(bot: ShufersalBot, username: string, password: string) {
         productCode: firstEntry.product.code,
         frontQuantity: firstEntry.quantity,
         quantity: firstEntry.quantity,
-        sellingMethod: 'BY_UNIT',
+        sellingMethod: firstEntry.product.sellingMethod.code,
         comment: '',
         longTail: false,
       },

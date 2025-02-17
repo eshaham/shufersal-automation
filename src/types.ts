@@ -205,7 +205,7 @@ export interface ProductImage {
   url: string;
   altText: string;
   galleryIndex?: number;
-  code?: string;
+  code?: string | null;
 }
 
 export interface Product {
@@ -224,6 +224,22 @@ export interface Product {
   sku?: string;
   deliveryItem: boolean;
   food: boolean;
+  manufacturer?: string | null;
+  variantType: string | null;
+  sellingMethod: {
+    code: string;
+    type: string;
+  };
+  unit: {
+    code: string;
+    name: string;
+    conversion: number;
+    type: string;
+  };
+  pricePerUnit: Price;
+  categoryPrice: Price;
+  effectivePrice: number;
+  effectivePricePerUnit: number;
 }
 
 export interface OrderEntry {
