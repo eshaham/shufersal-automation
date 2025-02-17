@@ -20,7 +20,17 @@ async function automate(bot: ShufersalBot, username: string, password: string) {
   const lastOrder = orders.closedOrders[0];
   if (lastOrder) {
     const orderDetails = await session.getOrderDetails(lastOrder.code);
-    console.log(`Last order had ${orderDetails.entries.length} entries`);
+    const firstEntry = orderDetails.entries[0];
+    await session.addToCart([
+      {
+        productCode: firstEntry.product.code,
+        frontQuantity: firstEntry.quantity,
+        quantity: firstEntry.quantity,
+        sellingMethod: 'BY_UNIT',
+        comment: '',
+        longTail: false,
+      },
+    ]);
   } else {
     console.log('No closed orders found');
   }

@@ -263,3 +263,14 @@ export interface OrderDetails extends Order {
   deliveredDate?: number;
   deliveredDateString?: string;
 }
+
+// Cart
+
+export interface CartItem {
+  productCode: string;
+  frontQuantity: number;
+  quantity: number;
+  sellingMethod: string;
+  comment?: string;
+  longTail: boolean;
+}

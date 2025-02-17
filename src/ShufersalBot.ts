@@ -2,11 +2,21 @@ import assert from 'assert';
 
 import puppeteer, { Browser, Page } from 'puppeteer-core';
 
-import { AccountOrders, OrderDetails } from './types';
+import { AccountOrders, CartItem, OrderDetails } from './types';
 
 interface ShufersalBotOptions {
   executablePath: string;
   headless?: boolean;
+}
+
+declare global {
+  interface Window {
+    ACC: {
+      config: {
+        CSRFToken: string;
+      };
+    };
+  }
 }
 
 const BASE_URL = 'https://www.shufersal.co.il/online/he';
@@ -30,22 +40,42 @@ export class ShufersalSession {
     );
   }
 
-  private async apiRequest<T>(page: Page, method: 'GET', path: string) {
+  async addToCart(items: CartItem[]) {
+    return this.apiRequest<void>(this.page, 'POST', '/cart/addGrid', items);
+  }
+
+  private async apiRequest<T extends object | void>(
+    page: Page,
+    method: 'GET' | 'POST',
+    path: string,
+    body?: unknown,
+  ) {
     const data = await page.evaluate(
-      async (url, method) => {
+      async (url, method, body) => {
+        const csrftoken = window.ACC.config.CSRFToken;
         const response = await fetch(url, {
           headers: {
             'content-type': 'application/json',
+            csrftoken,
           },
           method,
+          body: body ? JSON.stringify(body) : undefined,
           mode: 'cors',
           credentials: 'include',
         });
-        const data = await response.json();
-        return data;
+        if (!response.ok) {
+          throw new Error(`Request failed with status ${response.status}`);
+        }
+        if (
+          response.headers.get('content-type')?.includes('application/json')
+        ) {
+          const data = await response.json();
+          return data;
+        }
       },
       `${BASE_URL}${path}`,
       method,
+      body,
     );
     return data as T;
   }
