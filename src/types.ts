@@ -283,6 +283,13 @@ export interface OrderDetails extends Order {
 // Cart
 
 export interface CartItem {
+  entryNumber: number;
+  productCode: string;
+  productName: string;
+  cartyQty: number;
+}
+
+export interface CartItemAdd {
   productCode: string;
   frontQuantity: number;
   quantity: number;

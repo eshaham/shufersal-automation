@@ -2,7 +2,7 @@ import assert from 'assert';
 
 import puppeteer, { Browser, Page } from 'puppeteer-core';
 
-import { AccountOrders, CartItem, OrderDetails } from './types';
+import { AccountOrders, CartItem, CartItemAdd, OrderDetails } from './types';
 
 interface ShufersalBotOptions {
   executablePath: string;
@@ -32,11 +32,18 @@ export class ShufersalSession {
     return this.apiRequest<OrderDetails>('GET', `/my-account/orders/${code}`);
   }
 
-  async addToCart(items: CartItem[]) {
-    return this.apiRequest<void>('POST', '/cart/addGrid', items);
+  async addToCart(items: CartItemAdd[]) {
+    return this.apiRequest('POST', '/cart/addGrid', items);
   }
 
-  private async apiRequest<T extends object | void>(
+  async getCartItems(): Promise<CartItem[]> {
+    return this.apiRequest<CartItem[]>(
+      'GET',
+      '/recommendations/entry-recommendations',
+    );
+  }
+
+  private async apiRequest<T extends object | undefined>(
     method: 'GET' | 'POST',
     path: string,
     body?: unknown,

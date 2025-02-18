@@ -21,16 +21,24 @@ async function automate(bot: ShufersalBot, username: string, password: string) {
   if (lastOrder) {
     const orderDetails = await session.getOrderDetails(lastOrder.code);
     const firstEntry = orderDetails.entries[0];
-    await session.addToCart([
-      {
-        productCode: firstEntry.product.code,
-        frontQuantity: firstEntry.quantity,
-        quantity: firstEntry.quantity,
-        sellingMethod: firstEntry.product.sellingMethod.code,
-        comment: '',
-        longTail: false,
-      },
-    ]);
+
+    const cartItems = await session.getCartItems();
+    if (
+      !cartItems.some((item) => item.productCode === firstEntry.product.code)
+    ) {
+      await session.addToCart([
+        {
+          productCode: firstEntry.product.code,
+          frontQuantity: firstEntry.quantity,
+          quantity: firstEntry.quantity,
+          sellingMethod: firstEntry.product.sellingMethod.code,
+          comment: '',
+          longTail: false,
+        },
+      ]);
+    } else {
+      console.log('Product already in cart');
+    }
   } else {
     console.log('No closed orders found');
   }
