@@ -25,32 +25,23 @@ export class ShufersalSession {
   constructor(private page: Page) {}
 
   async getOrders() {
-    return this.apiRequest<AccountOrders>(
-      this.page,
-      'GET',
-      '/my-account/orders',
-    );
+    return this.apiRequest<AccountOrders>('GET', '/my-account/orders');
   }
 
   async getOrderDetails(code: string) {
-    return this.apiRequest<OrderDetails>(
-      this.page,
-      'GET',
-      `/my-account/orders/${code}`,
-    );
+    return this.apiRequest<OrderDetails>('GET', `/my-account/orders/${code}`);
   }
 
   async addToCart(items: CartItem[]) {
-    return this.apiRequest<void>(this.page, 'POST', '/cart/addGrid', items);
+    return this.apiRequest<void>('POST', '/cart/addGrid', items);
   }
 
   private async apiRequest<T extends object | void>(
-    page: Page,
     method: 'GET' | 'POST',
     path: string,
     body?: unknown,
   ) {
-    const data = await page.evaluate(
+    const data = await this.page.evaluate(
       async (url, method, body) => {
         const csrftoken = window.ACC.config.CSRFToken;
         const response = await fetch(url, {
