@@ -1,6 +1,6 @@
 import assert from 'assert';
 
-import puppeteer, { Browser, Page } from 'puppeteer-core';
+import puppeteer, { Browser, BrowserContext, Page } from 'puppeteer-core';
 
 import { AccountOrders, CartItem, CartItemAdd, OrderDetails } from './types';
 
@@ -22,7 +22,10 @@ declare global {
 const BASE_URL = 'https://www.shufersal.co.il/online/he';
 
 export class ShufersalSession {
-  constructor(private page: Page) {}
+  constructor(
+    private context: BrowserContext,
+    private page: Page,
+  ) {}
 
   async getOrders() {
     return this.apiRequest<AccountOrders>('GET', '/my-account/orders');
@@ -77,6 +80,10 @@ export class ShufersalSession {
     );
     return data as T;
   }
+
+  async close() {
+    await this.context.close();
+  }
 }
 
 export class ShufersalBot {
@@ -85,7 +92,8 @@ export class ShufersalBot {
   constructor(private options: ShufersalBotOptions) {}
 
   async createSession(username: string, password: string) {
-    const page = await this.createPage();
+    const context = await this.createContext();
+    const page = await context.newPage();
 
     await page.goto(`${BASE_URL}/login`);
     await page.type('#j_username', username);
@@ -93,7 +101,7 @@ export class ShufersalBot {
     await page.click('.btn-login');
     await page.waitForNavigation({ waitUntil: 'networkidle0' });
 
-    return new ShufersalSession(page);
+    return new ShufersalSession(context, page);
   }
 
   async terminate() {
@@ -111,11 +119,11 @@ export class ShufersalBot {
     }
   }
 
-  private async createPage() {
+  private async createContext() {
     await this.initIfNeeded();
     assert(this.browser);
 
-    const page = await this.browser.newPage();
-    return page;
+    const context = await this.browser.createBrowserContext();
+    return context;
   }
 }
