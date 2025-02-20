@@ -1,8 +1,21 @@
 import assert from 'assert';
 
+import {
+  AccountOrders,
+  Item,
+  ItemDetails,
+  OrderDetails,
+  OrderInfo,
+  Product,
+  ShufersalAccountOrders,
+  ShufersalCartItem,
+  ShufersalCartItemAdd,
+  ShufersalOrder,
+  ShufersalOrderDetails,
+  ShufersalOrderEntry,
+  ShufersalProduct,
+} from '@shufersal-automation';
 import puppeteer, { Browser, BrowserContext, Page } from 'puppeteer-core';
-
-import { AccountOrders, CartItem, CartItemAdd, OrderDetails } from './types';
 
 interface ShufersalBotOptions {
   executablePath: string;
@@ -21,29 +34,104 @@ declare global {
 
 const BASE_URL = 'https://www.shufersal.co.il/online/he';
 
+function shufersalDateTimeToDateString(dateTime: string): string {
+  return dateTime.split(' ')[0].replace(/\\/g, '-');
+}
+
+function shufersalAccountOrderToOrderInfo(order: ShufersalOrder): OrderInfo {
+  return {
+    code: order.code,
+    date: shufersalDateTimeToDateString(order.deliveredDateString),
+  };
+}
+
+function shufersalProductToProduct(product: ShufersalProduct): Product {
+  return {
+    code: product.code,
+    name: product.name,
+    mainCategory: product.commercialCategoryGroup,
+    subCategory: product.commercialCategorySubGroup,
+  };
+}
+
+function shufersalOrderEntryToItem(entry: ShufersalOrderEntry): ItemDetails {
+  return {
+    productCode: entry.product.code,
+    product: shufersalProductToProduct(entry.product),
+    quantity: entry.quantity,
+    pricePerUnit: entry.basePrice.value,
+  };
+}
+
+function shufersalOrderToOrderDetails(
+  order: ShufersalOrderDetails,
+): OrderDetails {
+  return {
+    code: order.code,
+    date: shufersalDateTimeToDateString(order.deliveredDateString),
+    items: order.entries.map(shufersalOrderEntryToItem),
+  };
+}
+
+function shufersalCartItemToItem(cartItem: ShufersalCartItem): Item {
+  return {
+    productCode: cartItem.productCode,
+    quantity: cartItem.cartyQty,
+  };
+}
+
+function itemToShufersalCartItemAdd(item: Item): ShufersalCartItemAdd {
+  return {
+    productCode: item.productCode,
+    quantity: item.quantity,
+    frontQuantity: item.quantity,
+    sellingMethod: 'BY_UNIT',
+    longTail: false,
+  };
+}
+
 export class ShufersalSession {
   constructor(
     private context: BrowserContext,
     private page: Page,
   ) {}
 
-  async getOrders() {
-    return this.apiRequest<AccountOrders>('GET', '/my-account/orders');
+  async getOrders(): Promise<AccountOrders> {
+    const accountOrders = await this.apiRequest<ShufersalAccountOrders>(
+      'GET',
+      '/my-account/orders',
+    );
+    return {
+      activeOrders: accountOrders.activeOrders.map((order) =>
+        shufersalAccountOrderToOrderInfo(order),
+      ),
+      closedOrders: accountOrders.closedOrders.map((order) =>
+        shufersalAccountOrderToOrderInfo(order),
+      ),
+    };
   }
 
-  async getOrderDetails(code: string) {
-    return this.apiRequest<OrderDetails>('GET', `/my-account/orders/${code}`);
+  async getOrderDetails(code: string): Promise<OrderDetails> {
+    const orderDetails = await this.apiRequest<ShufersalOrderDetails>(
+      'GET',
+      `/my-account/orders/${code}`,
+    );
+    return shufersalOrderToOrderDetails(orderDetails);
   }
 
-  async addToCart(items: CartItemAdd[]) {
-    return this.apiRequest('POST', '/cart/addGrid', items);
+  async addToCart(items: Item[]): Promise<void> {
+    const shufersalCartEntries = items.map((item) =>
+      itemToShufersalCartItemAdd(item),
+    );
+    await this.apiRequest('POST', '/cart/addGrid', shufersalCartEntries);
   }
 
-  async getCartItems(): Promise<CartItem[]> {
-    return this.apiRequest<CartItem[]>(
+  async getCartItems(): Promise<Item[]> {
+    const cartItems = await this.apiRequest<ShufersalCartItem[]>(
       'GET',
       '/recommendations/entry-recommendations',
     );
+    return cartItems.map(shufersalCartItemToItem);
   }
 
   private async apiRequest<T extends object | undefined>(
