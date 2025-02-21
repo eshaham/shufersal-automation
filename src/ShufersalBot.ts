@@ -45,6 +45,7 @@ function shufersalAccountOrderToOrderInfo(order: ShufersalOrder): OrderInfo {
   return {
     code: order.code,
     deliveryDate: shufersalDateTimeToDateString(order.deliveredDateString),
+    rawData: order,
   };
 }
 
@@ -55,6 +56,7 @@ function shufersalProductToProduct(product: ShufersalProduct): Product {
     mainCategory: product.commercialCategoryGroup,
     subCategory: product.commercialCategorySubGroup,
     inStock: product.stock.stockLevelStatus.code === 'inStock',
+    rawData: product,
   };
 }
 
@@ -64,6 +66,7 @@ function shufersalOrderEntryToItem(entry: ShufersalOrderEntry): ItemDetails {
     product: shufersalProductToProduct(entry.product),
     quantity: entry.quantity,
     pricePerUnit: entry.basePrice.value,
+    rawData: entry,
   };
 }
 
@@ -74,6 +77,7 @@ function shufersalOrderToOrderDetails(
     code: order.code,
     deliveryDate: shufersalDateTimeToDateString(order.deliveredDateString),
     items: order.entries.map(shufersalOrderEntryToItem),
+    rawData: order,
   };
 }
 
@@ -81,6 +85,7 @@ function shufersalCartItemToItem(cartItem: ShufersalCartItem): Item {
   return {
     productCode: cartItem.productCode,
     quantity: cartItem.cartyQty,
+    rawData: cartItem,
   };
 }
 

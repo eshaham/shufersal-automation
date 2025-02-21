@@ -333,11 +333,13 @@ export interface Product {
   mainCategory: Category;
   subCategory: Category;
   inStock: boolean;
+  rawData: unknown;
 }
 
 export interface Item {
   productCode: string;
   quantity: number;
+  rawData: unknown;
 }
 
 export interface ItemDetails extends Item {
@@ -348,6 +350,7 @@ export interface ItemDetails extends Item {
 export interface OrderInfo {
   code: string;
   deliveryDate: string | null;
+  rawData: unknown;
 }
 
 export interface AccountOrders {
