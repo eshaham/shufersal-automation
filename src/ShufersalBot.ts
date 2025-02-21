@@ -34,14 +34,17 @@ declare global {
 
 const BASE_URL = 'https://www.shufersal.co.il/online/he';
 
-function shufersalDateTimeToDateString(dateTime: string): string {
+function shufersalDateTimeToDateString(dateTime: string | null): string | null {
+  if (!dateTime) {
+    return null;
+  }
   return dateTime.split(' ')[0].replace(/\\/g, '-');
 }
 
 function shufersalAccountOrderToOrderInfo(order: ShufersalOrder): OrderInfo {
   return {
     code: order.code,
-    date: shufersalDateTimeToDateString(order.deliveredDateString),
+    deliveryDate: shufersalDateTimeToDateString(order.deliveredDateString),
   };
 }
 
@@ -51,6 +54,7 @@ function shufersalProductToProduct(product: ShufersalProduct): Product {
     name: product.name,
     mainCategory: product.commercialCategoryGroup,
     subCategory: product.commercialCategorySubGroup,
+    inStock: product.stock.stockLevelStatus.code === 'inStock',
   };
 }
 
@@ -68,7 +72,7 @@ function shufersalOrderToOrderDetails(
 ): OrderDetails {
   return {
     code: order.code,
-    date: shufersalDateTimeToDateString(order.deliveredDateString),
+    deliveryDate: shufersalDateTimeToDateString(order.deliveredDateString),
     items: order.entries.map(shufersalOrderEntryToItem),
   };
 }

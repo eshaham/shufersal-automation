@@ -1,17 +1,20 @@
 // Order History
 
+export interface ShufersalBase {
+  code: string;
+  name: string;
+}
+
 export interface ShufersalPrice {
   currencyIso: string;
   value: number;
   priceType: string;
   formattedValue: string;
-  minQuantity?: number | null;
-  maxQuantity?: number | null;
 }
 
-export interface ShufersalStatus {
-  code: string;
-  type: string;
+export interface ShufersalStockStatus {
+  code: 'inStock' | 'outOfStock';
+  type: 'StockLevelStatus';
 }
 
 export interface ShufersalImage {
@@ -23,16 +26,12 @@ export interface ShufersalImage {
   description?: string | null;
 }
 
-export interface ShufersalCity {
-  code: string;
-  name: string;
+export interface ShufersalCity extends ShufersalBase {
   hasStreets: boolean;
   zipCode?: string | null;
 }
 
-export interface ShufersalStreet {
-  code: string;
-  name: string;
+export interface ShufersalStreet extends ShufersalBase {
   cityCode: string;
 }
 
@@ -78,10 +77,8 @@ export interface ShufersalAddress {
   zipcode?: ShufersalZipcode;
 }
 
-export interface ShufersalPaymentMode {
-  code: string;
+export interface ShufersalPaymentMode extends ShufersalBase {
   description: string;
-  name: string;
   image: ShufersalImage;
   type: string;
   creditCardType: string;
@@ -96,10 +93,7 @@ export interface ShufersalPaymentInfo {
   id: string;
   accountHolderName: string;
   cardType: string;
-  cardTypeData: {
-    code: string;
-    name?: string | null;
-  };
+  cardTypeData: ShufersalBase;
   cardNumber: string;
   expiryMonth: string;
   expiryYear: string;
@@ -108,73 +102,39 @@ export interface ShufersalPaymentInfo {
   billingAddress?: ShufersalAddress | null;
   paymentMode: string;
   paymentModeData: ShufersalPaymentMode;
-  cvv?: string | null;
-  ccNumber: string;
   brand: string;
 }
 
-export interface ShufersalConsignment {
-  code: string;
-  trackingID?: string | null;
-  status: ShufersalStatus;
-  statusDate?: string | null;
-  shippingAddress: ShufersalAddress;
-  deliveryPointOfService?: {
-    name: string;
-    displayName: string;
-    geoPoint: {
-      latitude: number;
-      longitude: number;
-    };
-    address: ShufersalAddress;
-  };
-  deliveryMode?: string;
-  timeSlotStartTime?: number;
-  timeSlotEndTime?: number;
+export interface ShufersalOrderStatus {
+  code: 'PICKING' | 'DELIVERED';
+  type: 'OrderStatus';
 }
 
 export interface ShufersalOrder {
   code: string;
-  net: boolean;
   totalPriceWithTax: ShufersalPrice;
   totalPrice: ShufersalPrice;
   totalTax: ShufersalPrice;
   subTotal: ShufersalPrice;
   subTotalWithoutQuoteDiscounts: ShufersalPrice;
-  deliveryCost?: ShufersalPrice | null;
   totalItems: number;
-  deliveryMode?: string | null;
   deliveryAddress: ShufersalAddress;
   paymentInfo: ShufersalPaymentInfo;
-  productDiscounts: ShufersalPrice;
-  orderDiscounts: ShufersalPrice;
-  quoteDiscounts: ShufersalPrice;
-  totalDiscounts: ShufersalPrice;
-  totalDiscountsWithQuoteDiscounts: ShufersalPrice;
-  subTotalWithDiscounts: ShufersalPrice;
-  site: string;
-  store: string;
   guid: string;
-  calculated: boolean;
   user: {
     uid: string;
     name: string;
     profilePicture?: string | null;
     asm: boolean;
   };
-  totalUnitCount: number;
-  status: ShufersalStatus;
-  statusDisplay: string;
   created: number;
+  status: ShufersalOrderStatus;
   createdString: string;
-  salesApplication: ShufersalStatus;
-  customerStatus: ShufersalStatus;
   deliveredDate: number;
-  deliveredDateString: string;
+  deliveredDateString: string | null;
   isUpdatable: boolean;
   isActive: boolean;
   isCancelable: boolean;
-  consignments?: ShufersalConsignment[] | null;
 }
 
 export interface ShufersalAccountOrders {
@@ -185,18 +145,7 @@ export interface ShufersalAccountOrders {
 // Order Details
 
 export interface ShufersalProductStock {
-  stockLevelStatus: ShufersalStatus;
-  stockLevel?: number | null;
-  stockThreshold?: number | null;
-  available?: number | null;
-  reserved?: number | null;
-  invMethod?: string | null;
-  inventoryManagement?: string | null;
-  inventoryOnTheWay?: number | null;
-  minimalThreshold1?: number | null;
-  minimalThreshold2?: number | null;
-  warehouse?: string | null;
-  productCode?: string | null;
+  stockLevelStatus: ShufersalStockStatus;
 }
 
 export interface ShufersalProductImage {
@@ -208,147 +157,79 @@ export interface ShufersalProductImage {
   code?: string | null;
 }
 
-export interface ShufersalProductCategory {
-  code: string;
-  name: string;
+export type ShufersalSellingMethod = 'BY_UNIT' | 'BY_WEIGHT' | 'BY_PACKAGE';
+
+export interface ShufersalProductUnit extends ShufersalBase {
+  conversion: number;
+  type: string;
 }
 
-export interface ShufersalProduct {
-  code: string;
-  name: string;
+export interface ShufersalProduct extends ShufersalBase {
   url: string;
   description: string;
-  purchasable: boolean;
   stock: ShufersalProductStock;
-  futureStocks?: ShufersalProductStock[] | null;
-  availableForPickup?: boolean | null;
-  averageRating?: number | null;
-  numberOfReviews?: number | null;
-  summary?: string | null;
-  manufacturer?: string | null;
-  variantType?: string | null;
   price: ShufersalPrice;
-  baseProduct?: string | null;
   images: ShufersalProductImage[];
-  categories?: string[] | null;
-  volumePricesFlag?: boolean | null;
-  firstCategoryNameList?: string[] | null;
-  multidimensional?: boolean | null;
-  configurable?: boolean;
-  keywords?: string[] | null;
-  genders?: string[] | null;
-  sku?: string;
-  commercialDepartment?: {
-    code: string;
-    name: string;
-  };
-  brand?: {
-    code: string;
-    name: string;
-  };
-  brandName?: string;
+  sku: string;
+  commercialDepartment: ShufersalBase;
+  brand: ShufersalBase;
   deliveryItem: boolean;
-  associatedDeiveryItem?: ShufersalProduct | null;
-  inventoryManagement?: string;
   sellingMethod: {
-    code: string;
+    code: ShufersalSellingMethod;
     type: string;
   };
-  groupingCode?: string | null;
-  country?: {
+  groupingCode: string | null;
+  country: {
     isocode: string;
     name: string;
   };
-  manufacturerInfo?: string | null;
-  privateLabel?: boolean;
-  newProduct?: boolean;
-  showOnSite?: boolean;
-  showOnMobile?: boolean;
-  searchable?: boolean;
-  indexable?: boolean;
-  packagingType?: string | null;
-  sourceOfSupply?: string;
-  productType?: string;
-  adultsOnly?: boolean;
-  giftProduct?: boolean;
-  minOrderWeight?: number | null;
-  maxOrderWeight?: number | null;
-  minOrderQuantity?: number | null;
-  maxOrderQuantity?: number | null;
-  food: boolean;
-  ignoreERPCategory?: string | null;
-  stockReservationMethod?: string;
-  ean?: string | null;
-  popularityRanking?: number | null;
+  manufacturerInfo: ShufersalBase | null;
+  privateLabel: boolean;
+  newProduct: boolean;
+  showOnSite: boolean;
+  showOnMobile: boolean;
+  searchable: boolean;
+  indexable: boolean;
+  packagingType: string | null;
+  adultsOnly: boolean;
+  minOrderWeight: number | null;
+  maxOrderWeight: number | null;
+  minOrderQuantity: number | null;
+  maxOrderQuantity: number | null;
   pricePerUnit: ShufersalPrice;
   categoryPrice: ShufersalPrice;
-  pricePerUnitWithoutDiscount?: ShufersalPrice;
-  valueForComparison?: number;
-  unitForComparison?: string;
-  unitDescription?: string;
+  pricePerUnitWithoutDiscount: ShufersalPrice;
+  valueForComparison: number;
+  unitForComparison: string;
+  unitDescription: string | null;
   depositPrice?: number;
-  gallery360Images?: ShufersalProductImage[] | null;
-  gallery360Link?: string | null;
-  galleryAudios?: string[] | null;
-  galleryPdfs?: string[] | null;
-  galleryVideos?: string[] | null;
-  generalVideos?: string[] | null;
-  icon?: string | null;
-  numberContentUnits?: number;
-  unit: {
-    code: string;
-    name: string;
-    conversion: number;
-    type: string;
-  };
-  deliveryTime?: string | null;
-  commercialCategoryGroup: ShufersalProductCategory;
-  commercialCategorySubGroup: ShufersalProductCategory;
-  productPriceGroup?: string | null;
-  secondLevelCategory?: string;
-  cartStatus?: {
+  unit: ShufersalProductUnit;
+  commercialCategoryGroup: ShufersalBase;
+  commercialCategorySubGroup: ShufersalBase;
+  secondLevelCategory: string | null;
+  cartStatus: {
     inCart: boolean;
-    qty?: number | null;
-    sellingMethod?: string | null;
-    comment?: string | null;
-    cartEntryNumber?: number | null;
+    qty: number | null;
+    sellingMethod: string | null;
+    comment: string | null;
+    cartEntryNumber: number | null;
   };
-  promotionsDisplay?: string | null;
-  promotionMsg?: string | null;
-  promotionCharacteristicsImg?: string | null;
-  promotionCodes?: string[];
-  mainPromotionCode?: string | null;
-  promotionCount?: number | null;
-  promotionCharacteristicDescription?: string | null;
-  allCategoryCodes?: string[];
-  effectiveMinQuantity?: number;
+  promotionCodes: string[];
+  allCategoryCodes: string[];
+  effectiveMinQuantity: number;
   effectivePrice: number;
   effectivePricePerUnit: number;
-  remarks?: string | null;
-  weightConversion?: number | null;
-  baseProductImageLarge?: string | null;
-  baseProductImageMedium?: string | null;
-  baseProductImageSmall?: string | null;
-  baseProductDescription?: string | null;
-  coordinationType?: string | null;
-  canonical?: string | null;
-  supply?: string | null;
-  responsibility?: string | null;
-  noIndex?: boolean | null;
-  longTail?: boolean;
-  isBeProduct?: boolean;
-  leafletLink?: string | null;
-  modifiable?: boolean;
-  calories?: number | null;
-  fats?: number | null;
-  healthy?: boolean;
-  sodium?: number | null;
-  sugar?: number | null;
-  weightIncrement?: number;
-  maxWeight?: number | null;
-  minWeight?: number | null;
-  healthAttributes?: string[];
-  healthRecommendation?: string | null;
+  remarks: string | null;
+  longTail: boolean;
+  isBeProduct: boolean;
+  calories: number | null;
+  fats: number | null;
+  sodium: number | null;
+  sugar: number | null;
+  weightIncrement: number | null;
+  maxWeight: number | null;
+  minWeight: number | null;
+  healthAttributes: { code: string; type: string }[];
 }
 
 export interface ShufersalOrderEntry {
@@ -357,34 +238,10 @@ export interface ShufersalOrderEntry {
   basePrice: ShufersalPrice;
   totalPrice: ShufersalPrice;
   product: ShufersalProduct;
-  updateable: boolean;
 }
 
 export interface ShufersalOrderDetails extends ShufersalOrder {
   entries: ShufersalOrderEntry[];
-  paymentType?: {
-    code: string;
-    displayName?: string | null;
-  };
-  b2bCustomerData?: {
-    uid: string;
-    name: string;
-    profilePicture?: string | null;
-    defaultBillingAddress?: ShufersalAddress;
-    defaultShippingAddress?: ShufersalAddress;
-    firstName: string;
-    lastName: string;
-    currency?: {
-      isocode: string;
-      name: string;
-      symbol: string;
-    };
-    language?: {
-      isocode: string;
-      name: string;
-    };
-    contactNumber?: string;
-  };
 }
 
 // Cart
@@ -400,14 +257,12 @@ export interface ShufersalCartItemAdd {
   productCode: string;
   frontQuantity: number;
   quantity: number;
-  sellingMethod: 'BY_UNIT' | 'BY_WEIGHT';
+  sellingMethod: ShufersalSellingMethod;
   comment?: string;
   longTail: boolean;
 }
 
-export interface ShufersalProductSearchResult {
-  code: string;
-  name: string;
+export interface ShufersalProductSearchResult extends ShufersalBase {
   url: string;
   description: string;
   purchasable?: boolean | null;
@@ -415,10 +270,7 @@ export interface ShufersalProductSearchResult {
   price: ShufersalPrice;
   baseProduct?: string;
   images: ShufersalProductImage[];
-  brand?: {
-    code?: string | null;
-    name: string;
-  };
+  brand: ShufersalBase | null;
   deliveryItem?: boolean | null;
   sellingMethod?: {
     code: string;
@@ -480,6 +332,7 @@ export interface Product {
   name: string;
   mainCategory: Category;
   subCategory: Category;
+  inStock: boolean;
 }
 
 export interface Item {
@@ -494,7 +347,7 @@ export interface ItemDetails extends Item {
 
 export interface OrderInfo {
   code: string;
-  date: string;
+  deliveryDate: string | null;
 }
 
 export interface AccountOrders {
@@ -503,5 +356,5 @@ export interface AccountOrders {
 }
 
 export interface OrderDetails extends OrderInfo {
-  items: Item[];
+  items: ItemDetails[];
 }

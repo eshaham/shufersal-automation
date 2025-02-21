@@ -20,22 +20,13 @@ async function automate(bot: ShufersalBot, username: string, password: string) {
   const lastOrder = orders.closedOrders[0];
   if (lastOrder) {
     const orderDetails = await session.getOrderDetails(lastOrder.code);
-    const firstEntry = orderDetails.entries[0];
+    const firstItem = orderDetails.items[0];
 
     const cartItems = await session.getCartItems();
     if (
-      !cartItems.some((item) => item.productCode === firstEntry.product.code)
+      !cartItems.some((item) => item.productCode === firstItem.product.code)
     ) {
-      await session.addToCart([
-        {
-          productCode: firstEntry.product.code,
-          frontQuantity: firstEntry.quantity,
-          quantity: firstEntry.quantity,
-          sellingMethod: firstEntry.product.sellingMethod.code,
-          comment: '',
-          longTail: false,
-        },
-      ]);
+      await session.addToCart([firstItem]);
     } else {
       console.log('Product already in cart');
     }
