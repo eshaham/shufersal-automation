@@ -7,6 +7,7 @@ import {
   OrderDetails,
   OrderInfo,
   Product,
+  SellingMethod,
   ShufersalAccountOrders,
   ShufersalCartItem,
   ShufersalCartItemAdd,
@@ -14,6 +15,7 @@ import {
   ShufersalOrderDetails,
   ShufersalOrderEntry,
   ShufersalProduct,
+  ShufersalSellingMethod,
 } from '@shufersal-automation';
 import puppeteer, { Browser, BrowserContext, Page } from 'puppeteer-core';
 
@@ -55,6 +57,10 @@ function shufersalProductToProduct(product: ShufersalProduct): Product {
     name: product.name,
     mainCategory: product.commercialCategoryGroup,
     subCategory: product.commercialCategorySubGroup,
+    sellingMethod:
+      product.sellingMethod.code === ShufersalSellingMethod.Unit
+        ? SellingMethod.Unit
+        : SellingMethod.Weight,
     inStock: product.stock.stockLevelStatus.code === 'inStock',
     rawData: product,
   };
@@ -89,12 +95,15 @@ function shufersalCartItemToItem(cartItem: ShufersalCartItem): Item {
   };
 }
 
-function itemToShufersalCartItemAdd(item: Item): ShufersalCartItemAdd {
+function itemToShufersalCartItemAdd(item: ItemDetails): ShufersalCartItemAdd {
   return {
     productCode: item.productCode,
     quantity: item.quantity,
     frontQuantity: item.quantity,
-    sellingMethod: 'BY_UNIT',
+    sellingMethod:
+      item.product.sellingMethod === SellingMethod.Unit
+        ? ShufersalSellingMethod.Unit
+        : ShufersalSellingMethod.Package,
     longTail: false,
   };
 }
@@ -128,7 +137,7 @@ export class ShufersalSession {
     return shufersalOrderToOrderDetails(orderDetails);
   }
 
-  async addToCart(items: Item[]): Promise<void> {
+  async addToCart(items: ItemDetails[]): Promise<void> {
     const shufersalCartEntries = items.map((item) =>
       itemToShufersalCartItemAdd(item),
     );

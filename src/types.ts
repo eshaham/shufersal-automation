@@ -157,7 +157,11 @@ export interface ShufersalProductImage {
   code?: string | null;
 }
 
-export type ShufersalSellingMethod = 'BY_UNIT' | 'BY_WEIGHT' | 'BY_PACKAGE';
+export enum ShufersalSellingMethod {
+  Unit = 'BY_UNIT',
+  Weight = 'BY_WEIGHT',
+  Package = 'BY_PACKAGE',
+}
 
 export interface ShufersalProductUnit extends ShufersalBase {
   conversion: number;
@@ -327,11 +331,17 @@ export interface Category {
   name: string;
 }
 
+export enum SellingMethod {
+  Unit = 'UNIT',
+  Weight = 'WEIGHT',
+}
+
 export interface Product {
   code: string;
   name: string;
   mainCategory: Category;
   subCategory: Category;
+  sellingMethod: SellingMethod;
   inStock: boolean;
   rawData: unknown;
 }
