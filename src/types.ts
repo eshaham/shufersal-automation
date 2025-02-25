@@ -230,6 +230,7 @@ export interface ShufersalProduct extends ShufersalBase {
   fats: number | null;
   sodium: number | null;
   sugar: number | null;
+  weightConversion: number | null;
   weightIncrement: number | null;
   maxWeight: number | null;
   minWeight: number | null;

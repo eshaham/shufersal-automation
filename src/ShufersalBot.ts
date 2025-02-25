@@ -67,11 +67,23 @@ function shufersalProductToProduct(product: ShufersalProduct): Product {
 }
 
 function shufersalOrderEntryToItem(entry: ShufersalOrderEntry): ItemDetails {
+  let quantity = entry.quantity;
+  const product = shufersalProductToProduct(entry.product);
+  if (
+    entry.product.sellingMethod.code === ShufersalSellingMethod.Package &&
+    entry.product.weightConversion
+  ) {
+    product.sellingMethod = SellingMethod.Unit;
+    quantity = entry.quantity / entry.product.weightConversion;
+  }
+  const pricePerUnit = parseFloat(
+    (entry.totalPrice.value / quantity).toFixed(2),
+  );
   return {
     productCode: entry.product.code,
     product: shufersalProductToProduct(entry.product),
-    quantity: entry.quantity,
-    pricePerUnit: entry.basePrice.value,
+    quantity: quantity,
+    pricePerUnit,
     rawData: entry,
   };
 }
