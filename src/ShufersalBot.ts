@@ -2,6 +2,7 @@ import assert from 'assert';
 
 import {
   AccountOrders,
+  CartItem,
   Item,
   ItemDetails,
   OrderDetails,
@@ -107,13 +108,13 @@ function shufersalCartItemToItem(cartItem: ShufersalCartItem): Item {
   };
 }
 
-function itemToShufersalCartItemAdd(item: ItemDetails): ShufersalCartItemAdd {
+function cartItemToShufersalCartItemAdd(item: CartItem): ShufersalCartItemAdd {
   return {
     productCode: item.productCode,
     quantity: item.quantity,
     frontQuantity: item.quantity,
     sellingMethod:
-      item.product.sellingMethod === SellingMethod.Unit
+      item.sellingMethod === SellingMethod.Unit
         ? ShufersalSellingMethod.Unit
         : ShufersalSellingMethod.Package,
     longTail: false,
@@ -149,9 +150,9 @@ export class ShufersalSession {
     return shufersalOrderToOrderDetails(orderDetails);
   }
 
-  async addToCart(items: ItemDetails[]): Promise<void> {
+  async addToCart(items: CartItem[]): Promise<void> {
     const shufersalCartEntries = items.map((item) =>
-      itemToShufersalCartItemAdd(item),
+      cartItemToShufersalCartItemAdd(item),
     );
     await this.apiRequest('POST', '/cart/addGrid', shufersalCartEntries);
   }

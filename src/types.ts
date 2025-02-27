@@ -353,6 +353,10 @@ export interface Item {
   rawData: unknown;
 }
 
+export interface CartItem extends Item {
+  sellingMethod: SellingMethod;
+}
+
 export interface ItemDetails extends Item {
   product: Product;
   pricePerUnit: number;

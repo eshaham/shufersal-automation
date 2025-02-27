@@ -26,7 +26,9 @@ async function automate(bot: ShufersalBot, username: string, password: string) {
     if (
       !cartItems.some((item) => item.productCode === firstItem.product.code)
     ) {
-      await session.addToCart([firstItem]);
+      await session.addToCart([
+        { ...firstItem, sellingMethod: firstItem.product.sellingMethod },
+      ]);
     } else {
       console.log('Product already in cart');
     }
