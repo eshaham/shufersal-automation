@@ -327,6 +327,31 @@ export interface ShufersalProductSearchResponse {
   }[];
 }
 
+export interface ShufersalTimeSlot {
+  fromHour: number;
+  toHour: number;
+  dayType: string;
+  customerType: string | null;
+  sourceOfSupply: string;
+  available: number;
+  reserved: number;
+  locked: number;
+  price: ShufersalPrice;
+  deliveryCostCode: string;
+  code: string;
+  selectable: boolean;
+  selectableLongTail: boolean;
+  fromHourString: string;
+  isToday: boolean;
+  deliveryZone: {
+    code: string;
+  };
+}
+
+export interface ShufersalAvailableTimeSlotsResponse {
+  [date: string]: ShufersalTimeSlot[];
+}
+
 export interface Category {
   code: string;
   name: string;
@@ -375,4 +400,10 @@ export interface AccountOrders {
 
 export interface OrderDetails extends OrderInfo {
   items: ItemDetails[];
+}
+
+export interface DeliveryTimeSlot {
+  code: string;
+  dateTime: string;
+  rawData: unknown;
 }

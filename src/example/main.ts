@@ -32,6 +32,10 @@ async function automate(bot: ShufersalBot, username: string, password: string) {
     } else {
       console.log('Product already in cart');
     }
+
+    const availableTimeSlots = await session.getAvailableTimeSlots();
+    const lastTimeSlot = availableTimeSlots[availableTimeSlots.length - 1];
+    console.log('Last available time slot:', lastTimeSlot);
   } else {
     console.log('No closed orders found');
   }

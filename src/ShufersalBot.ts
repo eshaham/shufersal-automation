@@ -3,6 +3,7 @@ import assert from 'assert';
 import {
   AccountOrders,
   CartItem,
+  DeliveryTimeSlot,
   Item,
   ItemDetails,
   OrderDetails,
@@ -10,6 +11,7 @@ import {
   Product,
   SellingMethod,
   ShufersalAccountOrders,
+  ShufersalAvailableTimeSlotsResponse,
   ShufersalCartItem,
   ShufersalCartItemAdd,
   ShufersalOrder,
@@ -108,6 +110,23 @@ function shufersalCartItemToItem(cartItem: ShufersalCartItem): Item {
   };
 }
 
+function shufersalAvailableTimeslotsResponseToDeliveryTimeslots(
+  response: ShufersalAvailableTimeSlotsResponse,
+): DeliveryTimeSlot[] {
+  const timeSlots: DeliveryTimeSlot[] = [];
+  for (const date in response) {
+    for (const timeSlot of response[date]) {
+      const dateTime = new Date(timeSlot.fromHour);
+      timeSlots.push({
+        code: timeSlot.code,
+        dateTime: dateTime.toISOString(),
+        rawData: timeSlot,
+      });
+    }
+  }
+  return timeSlots;
+}
+
 function cartItemToShufersalCartItemAdd(item: CartItem): ShufersalCartItemAdd {
   return {
     productCode: item.productCode,
@@ -163,6 +182,14 @@ export class ShufersalSession {
       '/recommendations/entry-recommendations',
     );
     return cartItems.map(shufersalCartItemToItem);
+  }
+
+  async getAvailableTimeSlots(): Promise<DeliveryTimeSlot[]> {
+    const response = await this.apiRequest<ShufersalAvailableTimeSlotsResponse>(
+      'GET',
+      '/timeSlot/preselection/getHomeDeliverySlots',
+    );
+    return shufersalAvailableTimeslotsResponseToDeliveryTimeslots(response);
   }
 
   private async apiRequest<T extends object | undefined>(
