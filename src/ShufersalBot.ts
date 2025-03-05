@@ -217,6 +217,23 @@ export class ShufersalSession {
     return shufersalTimeSlotToDeliveryTimeSlot(shufersalTimeSlot);
   }
 
+  async selectTimeSlot(timeSlotCode: string): Promise<void> {
+    const availableTimeSlots = await this.getAvailableTimeSlots();
+    const timeSlot = availableTimeSlots.find(
+      (slot) => slot.code === timeSlotCode,
+    );
+    if (!timeSlot) {
+      throw new Error(`Time slot ${timeSlotCode} not found`);
+    }
+    await this.apiRequest(
+      'POST',
+      '/timeSlot/preselection/postHomeDeliverySlot',
+      {
+        homeDeliveryTimeSlot: timeSlot.rawData,
+      },
+    );
+  }
+
   private async apiRequest<T extends object | undefined>(
     method: 'GET' | 'POST',
     path: string,

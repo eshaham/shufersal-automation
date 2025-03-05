@@ -37,7 +37,8 @@ async function automate(bot: ShufersalBot, username: string, password: string) {
     if (!selectedTimeSlot) {
       const availableTimeSlots = await session.getAvailableTimeSlots();
       const lastTimeSlot = availableTimeSlots[availableTimeSlots.length - 1];
-      console.log('Last available time slot:', lastTimeSlot);
+      console.log('Selecting last available time slot:', lastTimeSlot);
+      await session.selectTimeSlot(lastTimeSlot.code);
     } else {
       console.log('Time slot already selected:', selectedTimeSlot);
     }
