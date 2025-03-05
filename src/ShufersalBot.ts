@@ -19,6 +19,7 @@ import {
   ShufersalOrderEntry,
   ShufersalProduct,
   ShufersalSellingMethod,
+  ShufersalTimeSlot,
 } from '@shufersal-automation';
 import puppeteer, { Browser, BrowserContext, Page } from 'puppeteer-core';
 
@@ -110,18 +111,31 @@ function shufersalCartItemToItem(cartItem: ShufersalCartItem): Item {
   };
 }
 
+function shufersalTimeSlotToDeliveryTimeSlot(
+  shufersalTimeSlot: ShufersalTimeSlot,
+): DeliveryTimeSlot | null {
+  if (!shufersalTimeSlot.fromHour || !shufersalTimeSlot.code) {
+    return null;
+  }
+  const dateTime = new Date(shufersalTimeSlot.fromHour);
+  const timeSlot = {
+    code: shufersalTimeSlot.code,
+    dateTime: dateTime.toISOString(),
+    rawData: shufersalTimeSlot,
+  };
+  return timeSlot;
+}
+
 function shufersalAvailableTimeslotsResponseToDeliveryTimeslots(
   response: ShufersalAvailableTimeSlotsResponse,
 ): DeliveryTimeSlot[] {
   const timeSlots: DeliveryTimeSlot[] = [];
   for (const date in response) {
-    for (const timeSlot of response[date]) {
-      const dateTime = new Date(timeSlot.fromHour);
-      timeSlots.push({
-        code: timeSlot.code,
-        dateTime: dateTime.toISOString(),
-        rawData: timeSlot,
-      });
+    for (const shufersalTimeSlot of response[date]) {
+      const timeSlot = shufersalTimeSlotToDeliveryTimeSlot(shufersalTimeSlot);
+      if (timeSlot) {
+        timeSlots.push(timeSlot);
+      }
     }
   }
   return timeSlots;
@@ -190,6 +204,17 @@ export class ShufersalSession {
       '/timeSlot/preselection/getHomeDeliverySlots',
     );
     return shufersalAvailableTimeslotsResponseToDeliveryTimeslots(response);
+  }
+
+  async getSelectedTimeSlot(): Promise<DeliveryTimeSlot | null> {
+    const shufersalTimeSlot = await this.apiRequest<ShufersalTimeSlot>(
+      'GET',
+      '/timeSlot/preselection/getSelectedTimeslot',
+    );
+    if (!shufersalTimeSlot || !shufersalTimeSlot.code) {
+      return null;
+    }
+    return shufersalTimeSlotToDeliveryTimeSlot(shufersalTimeSlot);
   }
 
   private async apiRequest<T extends object | undefined>(

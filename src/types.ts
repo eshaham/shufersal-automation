@@ -328,22 +328,22 @@ export interface ShufersalProductSearchResponse {
 }
 
 export interface ShufersalTimeSlot {
-  fromHour: number;
-  toHour: number;
-  dayType: string;
+  fromHour: number | null;
+  toHour: number | null;
+  dayType: string | null;
   customerType: string | null;
-  sourceOfSupply: string;
+  sourceOfSupply: string | null;
   available: number;
   reserved: number;
   locked: number;
-  price: ShufersalPrice;
-  deliveryCostCode: string;
-  code: string;
+  price: ShufersalPrice | null;
+  deliveryCostCode: string | null;
+  code: string | null;
   selectable: boolean;
   selectableLongTail: boolean;
-  fromHourString: string;
+  fromHourString: string | null;
   isToday: boolean;
-  deliveryZone: {
+  deliveryZone?: {
     code: string;
   };
 }
