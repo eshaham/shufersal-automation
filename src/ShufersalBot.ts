@@ -45,17 +45,23 @@ declare global {
 
 const BASE_URL = 'https://www.shufersal.co.il/online/he';
 
-function shufersalDateTimeToDateString(dateTime: string | null): string | null {
-  if (!dateTime) {
-    return null;
+function extractDeliveryDateTimeFromShufersalOrder(order: ShufersalOrder) {
+  if (order.consignments?.length !== 1) {
+    throw new Error(`Unexpected number of consignments in order ${order.code}`);
   }
-  return dateTime.split(' ')[0].replace(/\\/g, '-');
+  const consignment = order.consignments[0];
+  const dateTime = new Date(consignment.timeSlotStartTime);
+  return dateTime;
 }
 
 function shufersalAccountOrderToOrderInfo(order: ShufersalOrder): OrderInfo {
+  const dateTime = extractDeliveryDateTimeFromShufersalOrder(order);
   return {
     code: order.code,
-    deliveryDate: shufersalDateTimeToDateString(order.deliveredDateString),
+    deliveryDateTime: dateTime.toISOString(),
+    isActive: order.isActive,
+    isCancelable: order.isCancelable,
+    isUpdatable: order.isUpdatable,
     rawData: order,
   };
 }
@@ -98,13 +104,13 @@ function shufersalOrderEntryToItem(entry: ShufersalOrderEntry): ItemDetails {
 }
 
 function shufersalOrderToOrderDetails(
-  order: ShufersalOrderDetails,
+  shufersalOrder: ShufersalOrderDetails,
 ): OrderDetails {
+  const order = shufersalAccountOrderToOrderInfo(shufersalOrder);
   return {
-    code: order.code,
-    deliveryDate: shufersalDateTimeToDateString(order.deliveredDateString),
-    items: order.entries.map(shufersalOrderEntryToItem),
-    rawData: order,
+    ...order,
+    items: shufersalOrder.entries.map(shufersalOrderEntryToItem),
+    rawData: shufersalOrder,
   };
 }
 

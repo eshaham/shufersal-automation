@@ -77,6 +77,38 @@ export interface ShufersalAddress {
   zipcode?: ShufersalZipcode;
 }
 
+export interface ShufersalConsignment {
+  code: string;
+  trackingID: string | null;
+  status: {
+    code: string;
+    type: string;
+  };
+  statusDate: string | null;
+  shippingAddress: ShufersalAddress;
+  statusDisplay: string | null;
+  region: string | null;
+  sourceOfSupply: string;
+  deliveryItemCode: string | null;
+  deliveryCost: number | null;
+  timeSlotStartTime: number;
+  timeSlotStartTimeString: string;
+  timeSlotStartHoursString: string;
+  timeSlotStartDateString: string;
+  timeSlotEndTime: number;
+  timeSlotEndHoursString: string;
+  timeSlotType: string;
+  consignmentCustomerStatus: {
+    code: string;
+    type: string;
+  };
+  count: number;
+  noteForSupplier: string | null;
+  supportsShipping: boolean;
+  deliveryMode: string;
+  additionalTime: string | null;
+}
+
 export interface ShufersalPaymentMode extends ShufersalBase {
   description: string;
   image: ShufersalImage;
@@ -106,7 +138,7 @@ export interface ShufersalPaymentInfo {
 }
 
 export interface ShufersalOrderStatus {
-  code: 'PICKING' | 'DELIVERED';
+  code: 'RECEIVED' | 'PICKING' | 'DELIVERED';
   type: 'OrderStatus';
 }
 
@@ -127,6 +159,7 @@ export interface ShufersalOrder {
     profilePicture?: string | null;
     asm: boolean;
   };
+  consignments: ShufersalConsignment[];
   created: number;
   status: ShufersalOrderStatus;
   createdString: string;
@@ -399,7 +432,10 @@ export interface ItemDetails extends Item {
 
 export interface OrderInfo {
   code: string;
-  deliveryDate: string | null;
+  deliveryDateTime: string;
+  isUpdatable: boolean;
+  isActive: boolean;
+  isCancelable: boolean;
   rawData: unknown;
 }
 
