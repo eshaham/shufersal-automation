@@ -2,9 +2,9 @@ import assert from 'assert';
 
 import {
   AccountOrders,
-  CartItem,
+  CartItemToAdd,
   DeliveryTimeSlot,
-  Item,
+  ExistingCartItem,
   ItemDetails,
   OrderDetails,
   OrderInfo,
@@ -108,10 +108,13 @@ function shufersalOrderToOrderDetails(
   };
 }
 
-function shufersalCartItemToItem(cartItem: ShufersalCartItem): Item {
+function shufersalCartItemToItem(
+  cartItem: ShufersalCartItem,
+): ExistingCartItem {
   return {
     productCode: cartItem.productCode,
     quantity: cartItem.cartyQty,
+    inStock: cartItem.recommendation !== 'SWITCH',
     rawData: cartItem,
   };
 }
@@ -146,7 +149,9 @@ function shufersalAvailableTimeslotsResponseToDeliveryTimeslots(
   return timeSlots;
 }
 
-function cartItemToShufersalCartItemAdd(item: CartItem): ShufersalCartItemAdd {
+function cartItemToShufersalCartItemAdd(
+  item: CartItemToAdd,
+): ShufersalCartItemAdd {
   return {
     productCode: item.productCode,
     quantity: item.quantity,
@@ -189,14 +194,36 @@ export class ShufersalSession {
     return shufersalOrderToOrderDetails(orderDetails);
   }
 
-  async addToCart(items: CartItem[]): Promise<void> {
+  async addToCart(items: CartItemToAdd[]): Promise<void> {
     const shufersalCartEntries = items.map((item) =>
       cartItemToShufersalCartItemAdd(item),
     );
     await this.apiRequest('POST', '/cart/addGrid', shufersalCartEntries);
   }
 
-  async getCartItems(): Promise<Item[]> {
+  async removeFromCart(productCode: string): Promise<void> {
+    const cartItems = await this.getCartItems();
+    const cartItem = cartItems.find((item) => item.productCode === productCode);
+
+    if (!cartItem) {
+      throw new Error(`Product ${productCode} not found in cart`);
+    }
+
+    const shufersalCartItem = cartItem.rawData as ShufersalCartItem;
+    const query = new URLSearchParams({
+      entryNumber: shufersalCartItem.entryNumber.toString(),
+      qty: '0',
+      'cartContext[openFrom]': 'CART',
+      'cartContext[recommendationType]': 'REGULAR',
+      'cartContext[action]': 'remove',
+    });
+
+    await this.apiRequest('POST', `/cart/update?${query.toString()}`, {
+      quantity: 0,
+    });
+  }
+
+  async getCartItems(): Promise<ExistingCartItem[]> {
     const cartItems = await this.apiRequest<ShufersalCartItem[]>(
       'GET',
       '/recommendations/entry-recommendations',
@@ -240,7 +267,23 @@ export class ShufersalSession {
     );
   }
 
-  async createOrder(): Promise<void> {
+  async createOrder(removeMissingItems: boolean): Promise<void> {
+    const cartItems = await this.getCartItems();
+    const missingItems = cartItems.filter((item) => !item.inStock);
+    if (missingItems.length > 0) {
+      if (removeMissingItems) {
+        for (const item of missingItems) {
+          await this.removeFromCart(item.productCode);
+        }
+      } else {
+        throw new Error(
+          `Missing items in cart: ${missingItems
+            .map((item) => item.productCode)
+            .join(', ')}`,
+        );
+      }
+    }
+
     await this.page.goto(`${BASE_URL}/cart/cartsummary`);
 
     await this.page.waitForSelector('.miglog-cart-summary-checkoutLink', {

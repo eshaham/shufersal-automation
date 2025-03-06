@@ -32,6 +32,7 @@ async function automate(bot: ShufersalBot, username: string, password: string) {
     } else {
       console.log('Product already in cart');
     }
+    await session.removeFromCart(firstItem.product.code);
 
     const selectedTimeSlot = await session.getSelectedTimeSlot();
     if (!selectedTimeSlot) {
@@ -46,7 +47,7 @@ async function automate(bot: ShufersalBot, username: string, password: string) {
     console.log('No closed orders found');
   }
 
-  await session.createOrder();
+  await session.createOrder(true);
 }
 
 (async () => {

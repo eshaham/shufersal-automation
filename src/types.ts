@@ -256,6 +256,12 @@ export interface ShufersalCartItem {
   productCode: string;
   productName: string;
   cartyQty: number;
+  recommendation:
+    | 'NONE'
+    | 'PROMOTION'
+    | 'ADD_AND_SAVE'
+    | 'SWITCH_AND_SAVE'
+    | 'SWITCH';
 }
 
 export interface ShufersalCartItemAdd {
@@ -378,7 +384,11 @@ export interface Item {
   rawData: unknown;
 }
 
-export interface CartItem extends Item {
+export interface ExistingCartItem extends Item {
+  inStock: boolean;
+}
+
+export interface CartItemToAdd extends Item {
   sellingMethod: SellingMethod;
 }
 
