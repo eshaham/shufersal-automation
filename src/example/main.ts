@@ -45,6 +45,8 @@ async function automate(bot: ShufersalBot, username: string, password: string) {
   } else {
     console.log('No closed orders found');
   }
+
+  await session.createOrder();
 }
 
 (async () => {

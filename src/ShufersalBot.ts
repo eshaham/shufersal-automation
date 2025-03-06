@@ -28,6 +28,11 @@ interface ShufersalBotOptions {
   headless?: boolean;
 }
 
+interface ShufersalCredentials {
+  username: string;
+  password: string;
+}
+
 declare global {
   interface Window {
     ACC: {
@@ -158,6 +163,7 @@ export class ShufersalSession {
   constructor(
     private context: BrowserContext,
     private page: Page,
+    private credentials: ShufersalCredentials,
   ) {}
 
   async getOrders(): Promise<AccountOrders> {
@@ -234,6 +240,27 @@ export class ShufersalSession {
     );
   }
 
+  async createOrder(): Promise<void> {
+    await this.page.goto(`${BASE_URL}/cart/cartsummary`);
+
+    await this.page.waitForSelector('.miglog-cart-summary-checkoutLink', {
+      timeout: 60_000,
+      visible: true,
+    });
+    await this.page.click('.miglog-cart-summary-checkoutLink');
+
+    await this.page.waitForSelector('#j_password', { visible: true });
+    await this.page.type('#j_password', this.credentials.password, {
+      delay: 100,
+    });
+    await this.page.click('#checkoutPwd button[type="submit"]');
+
+    await this.page.waitForNavigation({ waitUntil: 'networkidle0' });
+    await this.page.click('.btnConfirm');
+
+    await this.page.waitForNavigation({ waitUntil: 'networkidle0' });
+  }
+
   private async apiRequest<T extends object | undefined>(
     method: 'GET' | 'POST',
     path: string,
@@ -289,7 +316,7 @@ export class ShufersalBot {
     await page.click('.btn-login');
     await page.waitForNavigation({ waitUntil: 'networkidle0' });
 
-    return new ShufersalSession(context, page);
+    return new ShufersalSession(context, page, { username, password });
   }
 
   async terminate() {
