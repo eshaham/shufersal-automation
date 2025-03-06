@@ -304,6 +304,10 @@ export class ShufersalSession {
     await this.page.waitForNavigation({ waitUntil: 'networkidle0' });
   }
 
+  async modifyOrder(code: string): Promise<void> {
+    await this.apiRequest('GET', `cart/cartFromOrder/${code}`);
+  }
+
   private async apiRequest<T extends object | undefined>(
     method: 'GET' | 'POST',
     path: string,
