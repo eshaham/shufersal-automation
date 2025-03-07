@@ -43,11 +43,12 @@ async function automate(bot: ShufersalBot, username: string, password: string) {
     } else {
       console.log('Time slot already selected:', selectedTimeSlot);
     }
+
+    // Uncomment to create order
+    // await session.createOrder(true);
   } else {
     console.log('No closed orders found');
   }
-
-  await session.createOrder(true);
 }
 
 (async () => {
