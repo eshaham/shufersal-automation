@@ -26,6 +26,7 @@ import puppeteer, { Browser, BrowserContext, Page } from 'puppeteer-core';
 interface ShufersalBotOptions {
   executablePath: string;
   headless?: boolean;
+  chromiumArgs?: string[];
 }
 
 interface ShufersalCredentials {
@@ -383,6 +384,7 @@ export class ShufersalBot {
       this.browser = await puppeteer.launch({
         executablePath: this.options.executablePath,
         headless: 'headless' in this.options ? this.options.headless : true,
+        args: this.options.chromiumArgs,
       });
     }
   }
