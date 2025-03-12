@@ -351,7 +351,7 @@ export class ShufersalSession {
     if (!this.isLoggedIn) {
       console.log('Logging in');
 
-      await this.page.goto(`${BASE_URL}/login`, { waitUntil: 'networkidle0' });
+      await this.page.goto(`${BASE_URL}/login`);
       console.debug('Login page loaded');
 
       await this.page.type('#j_username', this.credentials.username);
