@@ -172,6 +172,8 @@ function cartItemToShufersalCartItemAdd(
 }
 
 export class ShufersalSession {
+  private isLoggedIn = false;
+
   constructor(
     private context: BrowserContext,
     private page: Page,
@@ -179,6 +181,8 @@ export class ShufersalSession {
   ) {}
 
   async getOrders(): Promise<AccountOrders> {
+    await this.loginIfNeeded();
+
     const accountOrders = await this.apiRequest<ShufersalAccountOrders>(
       'GET',
       '/my-account/orders',
@@ -194,6 +198,8 @@ export class ShufersalSession {
   }
 
   async getOrderDetails(code: string): Promise<OrderDetails> {
+    await this.loginIfNeeded();
+
     const orderDetails = await this.apiRequest<ShufersalOrderDetails>(
       'GET',
       `/my-account/orders/${code}`,
@@ -202,6 +208,8 @@ export class ShufersalSession {
   }
 
   async addToCart(items: CartItemToAdd[]): Promise<void> {
+    await this.loginIfNeeded();
+
     const shufersalCartEntries = items.map((item) =>
       cartItemToShufersalCartItemAdd(item),
     );
@@ -209,6 +217,8 @@ export class ShufersalSession {
   }
 
   async removeFromCart(productCode: string): Promise<void> {
+    await this.loginIfNeeded();
+
     const cartItems = await this.getCartItems();
     const cartItem = cartItems.find((item) => item.productCode === productCode);
 
@@ -231,6 +241,8 @@ export class ShufersalSession {
   }
 
   async getCartItems(): Promise<ExistingCartItem[]> {
+    await this.loginIfNeeded();
+
     const cartItems = await this.apiRequest<ShufersalCartItem[]>(
       'GET',
       '/recommendations/entry-recommendations',
@@ -239,6 +251,8 @@ export class ShufersalSession {
   }
 
   async getAvailableTimeSlots(): Promise<DeliveryTimeSlot[]> {
+    await this.loginIfNeeded();
+
     const response = await this.apiRequest<ShufersalAvailableTimeSlotsResponse>(
       'GET',
       '/timeSlot/preselection/getHomeDeliverySlots',
@@ -247,6 +261,8 @@ export class ShufersalSession {
   }
 
   async getSelectedTimeSlot(): Promise<DeliveryTimeSlot | null> {
+    await this.loginIfNeeded();
+
     const shufersalTimeSlot = await this.apiRequest<ShufersalTimeSlot>(
       'GET',
       '/timeSlot/preselection/getSelectedTimeslot',
@@ -258,6 +274,8 @@ export class ShufersalSession {
   }
 
   async selectTimeSlot(timeSlotCode: string): Promise<void> {
+    await this.loginIfNeeded();
+
     const availableTimeSlots = await this.getAvailableTimeSlots();
     const timeSlot = availableTimeSlots.find(
       (slot) => slot.code === timeSlotCode,
@@ -275,6 +293,8 @@ export class ShufersalSession {
   }
 
   async createOrder(removeMissingItems: boolean): Promise<void> {
+    await this.loginIfNeeded();
+
     const cartItems = await this.getCartItems();
     const missingItems = cartItems.filter((item) => !item.inStock);
     if (missingItems.length > 0) {
@@ -312,6 +332,8 @@ export class ShufersalSession {
   }
 
   async modifyOrder(code: string): Promise<void> {
+    await this.loginIfNeeded();
+
     await this.apiRequest('GET', `cart/cartFromOrder/${code}`);
   }
 
@@ -321,6 +343,16 @@ export class ShufersalSession {
 
   async close() {
     await this.context.close();
+  }
+
+  private async loginIfNeeded() {
+    if (!this.isLoggedIn) {
+      await this.page.goto(`${BASE_URL}/login`);
+      await this.page.type('#j_username', this.credentials.username);
+      await this.page.type('#j_password', this.credentials.password);
+      await this.page.click('.btn-login');
+      await this.page.waitForNavigation({ waitUntil: 'networkidle0' });
+    }
   }
 
   private async apiRequest<T extends object | undefined>(
@@ -367,12 +399,6 @@ export class ShufersalBot {
   async createSession(username: string, password: string) {
     const context = await this.createContext();
     const page = await context.newPage();
-
-    await page.goto(`${BASE_URL}/login`);
-    await page.type('#j_username', username);
-    await page.type('#j_password', password);
-    await page.click('.btn-login');
-    await page.waitForNavigation({ waitUntil: 'networkidle0' });
 
     return new ShufersalSession(context, page, { username, password });
   }
