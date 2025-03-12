@@ -315,6 +315,14 @@ export class ShufersalSession {
     await this.apiRequest('GET', `cart/cartFromOrder/${code}`);
   }
 
+  async takeScreenshot() {
+    return this.page.screenshot();
+  }
+
+  async close() {
+    await this.context.close();
+  }
+
   private async apiRequest<T extends object | undefined>(
     method: 'GET' | 'POST',
     path: string,
@@ -348,10 +356,6 @@ export class ShufersalSession {
       body,
     );
     return data as T;
-  }
-
-  async close() {
-    await this.context.close();
   }
 }
 
