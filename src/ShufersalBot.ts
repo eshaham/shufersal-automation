@@ -351,7 +351,7 @@ export class ShufersalSession {
     if (!this.isLoggedIn) {
       console.log('Logging in');
 
-      await this.page.goto(`${BASE_URL}/login`);
+      await this.page.goto(`${BASE_URL}/login`, { timeout: 60_000 });
       console.debug('Login page loaded');
 
       await this.page.type('#j_username', this.credentials.username);
