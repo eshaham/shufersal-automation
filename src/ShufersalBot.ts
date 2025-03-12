@@ -356,6 +356,8 @@ export class ShufersalSession {
       await this.page.type('#j_password', this.credentials.password);
       await this.page.click('.btn-login');
       await this.page.waitForNavigation();
+
+      this.isLoggedIn = true;
     }
   }
 
