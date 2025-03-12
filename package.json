@@ -32,6 +32,7 @@
     "typescript-eslint": "^8.24.1"
   },
   "dependencies": {
+    "proxy-chain": "^2.5.7",
     "puppeteer-core": "^24.2.1"
   }
 }

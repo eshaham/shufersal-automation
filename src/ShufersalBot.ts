@@ -21,12 +21,14 @@ import {
   ShufersalSellingMethod,
   ShufersalTimeSlot,
 } from '@shufersal-automation';
+import * as proxyChain from 'proxy-chain';
 import puppeteer, { Browser, BrowserContext, Page } from 'puppeteer-core';
 
 interface ShufersalBotOptions {
   executablePath: string;
   headless?: boolean;
   chromiumArgs?: string[];
+  proxyUrl?: string;
 }
 
 interface ShufersalCredentials {
@@ -393,6 +395,7 @@ export class ShufersalSession {
 
 export class ShufersalBot {
   private browser: Browser | undefined;
+  private anonimizeProxy: string | undefined;
 
   constructor(private options: ShufersalBotOptions) {}
 
@@ -407,14 +410,26 @@ export class ShufersalBot {
     assert(this.browser);
     await this.browser.close();
     this.browser = undefined;
+
+    if (this.anonimizeProxy) {
+      await proxyChain.closeAnonymizedProxy(this.anonimizeProxy, true);
+      this.anonimizeProxy = undefined;
+    }
   }
 
   private async initIfNeeded() {
+    const args = this.options.chromiumArgs || [];
     if (!this.browser) {
+      if (this.options.proxyUrl) {
+        this.anonimizeProxy = await proxyChain.anonymizeProxy(
+          this.options.proxyUrl,
+        );
+        args.push(`--proxy-server=${this.anonimizeProxy}`);
+      }
       this.browser = await puppeteer.launch({
         executablePath: this.options.executablePath,
         headless: 'headless' in this.options ? this.options.headless : true,
-        args: this.options.chromiumArgs,
+        args,
       });
     }
   }

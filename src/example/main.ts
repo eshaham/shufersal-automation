@@ -3,9 +3,12 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+const EXECUTABLE_PATH = process.env['CHROME_PATH'];
+
 const USERNAME = process.env['SHUFERSAL_USERNAME'];
 const PASSWORD = process.env['SHUFERSAL_PASSWORD'];
-const EXECUTABLE_PATH = process.env['CHROME_PATH'];
+
+const PROXY_URL = process.env['PROXY_URL'];
 
 if (!USERNAME || !PASSWORD) {
   throw new Error('SHUFERSAL_USERNAME and SHUFERSAL_PASSWORD must be set');
@@ -54,6 +57,7 @@ async function automate(bot: ShufersalBot, username: string, password: string) {
 (async () => {
   const bot = new ShufersalBot({
     executablePath: EXECUTABLE_PATH,
+    proxyUrl: PROXY_URL,
   });
   try {
     await automate(bot, USERNAME, PASSWORD);
