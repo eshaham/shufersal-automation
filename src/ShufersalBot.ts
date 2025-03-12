@@ -316,7 +316,7 @@ export class ShufersalSession {
   }
 
   async takeScreenshot() {
-    return this.page.screenshot();
+    return this.page.screenshot() as Promise<Buffer>;
   }
 
   async close() {
