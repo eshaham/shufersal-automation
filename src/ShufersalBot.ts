@@ -351,11 +351,11 @@ export class ShufersalSession {
     if (!this.isLoggedIn) {
       console.log('Logging in');
 
-      await this.page.goto(`${BASE_URL}/login`);
+      await this.page.goto(`${BASE_URL}/login`, { waitUntil: 'networkidle0' });
       await this.page.type('#j_username', this.credentials.username);
       await this.page.type('#j_password', this.credentials.password);
       await this.page.click('.btn-login');
-      await this.page.waitForNavigation();
+      await this.page.waitForNavigation({ waitUntil: 'networkidle0' });
 
       this.isLoggedIn = true;
     }
