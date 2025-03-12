@@ -352,12 +352,21 @@ export class ShufersalSession {
       console.log('Logging in');
 
       await this.page.goto(`${BASE_URL}/login`, { waitUntil: 'networkidle0' });
+      console.debug('Login page loaded');
+
       await this.page.type('#j_username', this.credentials.username);
+      console.debug('Username entered');
+
       await this.page.type('#j_password', this.credentials.password);
+      console.debug('Password entered');
+
       await this.page.click('.btn-login');
+      console.debug('Login button clicked');
+
       await this.page.waitForNavigation({ waitUntil: 'networkidle0' });
 
       this.isLoggedIn = true;
+      console.log('Logged in');
     }
   }
 
