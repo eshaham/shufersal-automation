@@ -441,6 +441,7 @@ export interface OrderInfo {
   isUpdatable: boolean;
   isActive: boolean;
   isCancelable: boolean;
+  isBeingUpdated: boolean;
   rawData: unknown;
 }
 

@@ -94,7 +94,10 @@ function extractDeliveryDateTimeFromShufersalOrder(order: ShufersalOrder) {
   return dateTime;
 }
 
-function shufersalAccountOrderToOrderInfo(order: ShufersalOrder): OrderInfo {
+function shufersalAccountOrderToOrderInfo(
+  order: ShufersalOrder,
+  isBeingUpdated: boolean = false,
+): OrderInfo {
   const dateTime = extractDeliveryDateTimeFromShufersalOrder(order);
   return {
     code: order.code,
@@ -102,6 +105,7 @@ function shufersalAccountOrderToOrderInfo(order: ShufersalOrder): OrderInfo {
     isActive: order.isActive,
     isCancelable: order.isCancelable,
     isUpdatable: order.isUpdatable,
+    isBeingUpdated,
     rawData: order,
   };
 }
@@ -142,17 +146,6 @@ function shufersalOrderEntryToItem(entry: ShufersalOrderEntry): ItemDetails {
     quantity: quantity,
     pricePerUnit,
     rawData: entry,
-  };
-}
-
-function shufersalOrderToOrderDetails(
-  shufersalOrder: ShufersalOrderDetails,
-): OrderDetails {
-  const order = shufersalAccountOrderToOrderInfo(shufersalOrder);
-  return {
-    ...order,
-    items: shufersalOrder.entries.map(shufersalOrderEntryToItem),
-    rawData: shufersalOrder,
   };
 }
 
@@ -254,10 +247,17 @@ export class ShufersalSession {
       'GET',
       '/my-account/orders',
     );
+
+    const activeOrders: OrderInfo[] = [];
+    for (const order of accountOrders.activeOrders) {
+      const isBeingUpdated = await this.checkOrderInUpdateMode(order.code);
+      activeOrders.push(
+        shufersalAccountOrderToOrderInfo(order, isBeingUpdated),
+      );
+    }
+
     return {
-      activeOrders: accountOrders.activeOrders.map((order) =>
-        shufersalAccountOrderToOrderInfo(order),
-      ),
+      activeOrders,
       closedOrders: accountOrders.closedOrders.map((order) =>
         shufersalAccountOrderToOrderInfo(order),
       ),
@@ -271,7 +271,20 @@ export class ShufersalSession {
       'GET',
       `/my-account/orders/${code}`,
     );
-    return shufersalOrderToOrderDetails(orderDetails);
+
+    const isBeingUpdated = orderDetails.isActive
+      ? await this.checkOrderInUpdateMode(code)
+      : false;
+
+    const order = shufersalAccountOrderToOrderInfo(
+      orderDetails,
+      isBeingUpdated,
+    );
+    return {
+      ...order,
+      items: orderDetails.entries.map(shufersalOrderEntryToItem),
+      rawData: orderDetails,
+    };
   }
 
   async addToCart(items: CartItemToAdd[]): Promise<void> {
@@ -402,6 +415,17 @@ export class ShufersalSession {
     await this.loginIfNeeded();
 
     await this.apiRequest('GET', `cart/cartFromOrder/${code}`);
+  }
+
+  private async checkOrderInUpdateMode(orderCode: string): Promise<boolean> {
+    await this.page.goto(`${BASE_URL}/cart/load?restoreCart=true`);
+
+    const textContent = await this.page.evaluate(
+      () => document.body.textContent || '',
+    );
+    const updateText = `עדכון הזמנה מס׳ ${orderCode}`;
+
+    return textContent.includes(updateText);
   }
 
   async takeScreenshot() {
