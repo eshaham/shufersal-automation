@@ -236,6 +236,17 @@ export class ShufersalSession {
     return shufersalProductSearchResponseToSearchResults(response);
   }
 
+  async getProductByCode(productCode: string): Promise<Product | null> {
+    const codeToSearch = productCode.startsWith('P_')
+      ? productCode.substring(2)
+      : productCode;
+
+    const searchResults = await this.searchProducts(codeToSearch);
+    const product = searchResults.results.find((p) => p.code === productCode);
+
+    return product || null;
+  }
+
   async getOrders(): Promise<AccountOrders> {
     await this.loginIfNeeded();
 

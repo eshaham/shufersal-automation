@@ -26,6 +26,15 @@ async function automate(bot: ShufersalBot, username: string, password: string) {
     );
   });
 
+  const specificProduct = await session.getProductByCode('P_8004399331396');
+  if (specificProduct) {
+    console.log(
+      `\nFound specific product: ${specificProduct.name} - ${specificProduct.formattedPrice}`,
+    );
+  } else {
+    console.log('\nSpecific product not found');
+  }
+
   const orders = await session.getOrders();
   const lastOrder = orders.closedOrders[0];
   if (lastOrder) {
