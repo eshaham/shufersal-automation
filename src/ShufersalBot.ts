@@ -428,11 +428,11 @@ export class ShufersalSession {
     return textContent.includes(updateText);
   }
 
-  async takeScreenshot() {
+  async takeScreenshot(): Promise<Buffer> {
     return this.page.screenshot() as Promise<Buffer>;
   }
 
-  async close() {
+  async close(): Promise<void> {
     await this.context.close();
   }
 
@@ -489,14 +489,17 @@ export class ShufersalBot {
 
   constructor(private options: ShufersalBotOptions) {}
 
-  async createSession(username: string, password: string) {
+  async createSession(
+    username: string,
+    password: string,
+  ): Promise<ShufersalSession> {
     const context = await this.createContext();
     const page = await context.newPage();
 
     return new ShufersalSession(context, page, { username, password });
   }
 
-  async terminate() {
+  async terminate(): Promise<void> {
     assert(this.browser);
     await this.browser.close();
     this.browser = undefined;

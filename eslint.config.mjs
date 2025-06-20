@@ -7,4 +7,9 @@ export default tseslint.config(
   {
     ignores: ['dist'],
   },
+  {
+    rules: {
+      '@typescript-eslint/explicit-module-boundary-types': 'error',
+    },
+  },
 );

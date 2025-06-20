@@ -5,7 +5,9 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "cd src/example && npx tsx --inspect-brk main.ts",
-    "start": "cd src/example && npx tsx main.ts"
+    "start": "cd src/example && npx tsx main.ts",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix"
   },
   "repository": {
     "type": "git",
