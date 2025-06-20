@@ -9,6 +9,7 @@ import {
   OrderDetails,
   OrderInfo,
   Product,
+  SearchResults,
   SellingMethod,
   ShufersalAccountOrders,
   ShufersalAvailableTimeSlotsResponse,
@@ -18,6 +19,8 @@ import {
   ShufersalOrderDetails,
   ShufersalOrderEntry,
   ShufersalProduct,
+  ShufersalProductSearchResponse,
+  ShufersalProductSearchResult,
   ShufersalSellingMethod,
   ShufersalTimeSlot,
 } from '@shufersal-automation';
@@ -45,6 +48,42 @@ declare global {
 }
 
 const BASE_URL = 'https://www.shufersal.co.il/online/he';
+
+function shufersalProductSearchResultToProduct(
+  result: ShufersalProductSearchResult,
+): Product {
+  const sellingMethod =
+    result.sellingMethod?.code === ShufersalSellingMethod.Unit
+      ? SellingMethod.Unit
+      : SellingMethod.Weight;
+
+  const mainCategory = result.commercialCategoryGroup;
+  const subCategory = result.commercialCategorySubGroup;
+
+  return {
+    code: result.code,
+    name: result.name,
+    mainCategory,
+    subCategory,
+    sellingMethod,
+    inStock: result.stock.stockLevelStatus.code === 'inStock',
+    price: result.price.value,
+    formattedPrice: result.price.formattedValue,
+    rawData: result,
+  };
+}
+
+function shufersalProductSearchResponseToSearchResults(
+  response: ShufersalProductSearchResponse,
+): SearchResults {
+  return {
+    results: response.results.map(shufersalProductSearchResultToProduct),
+    totalResults: response.pagination.totalNumberOfResults,
+    currentPage: response.pagination.currentPage,
+    totalPages: response.pagination.numberOfPages,
+    pageSize: response.pagination.pageSize,
+  };
+}
 
 function extractDeliveryDateTimeFromShufersalOrder(order: ShufersalOrder) {
   if (order.consignments?.length !== 1) {
@@ -78,6 +117,8 @@ function shufersalProductToProduct(product: ShufersalProduct): Product {
         ? SellingMethod.Unit
         : SellingMethod.Weight,
     inStock: product.stock.stockLevelStatus.code === 'inStock',
+    price: product.price.value,
+    formattedPrice: product.price.formattedValue,
     rawData: product,
   };
 }
@@ -179,6 +220,21 @@ export class ShufersalSession {
     private page: Page,
     private credentials: ShufersalCredentials,
   ) {}
+
+  async searchProducts(
+    query: string,
+    limit: number = 20,
+    page: number = 0,
+  ): Promise<SearchResults> {
+    await this.loginIfNeeded();
+
+    const searchQuery = `${encodeURIComponent(query)}:relevance`;
+    const response = await this.apiRequest<ShufersalProductSearchResponse>(
+      'GET',
+      `/search/results?q=${searchQuery}&limit=${limit}&page=${page}`,
+    );
+    return shufersalProductSearchResponseToSearchResults(response);
+  }
 
   async getOrders(): Promise<AccountOrders> {
     await this.loginIfNeeded();

@@ -16,6 +16,16 @@ if (!EXECUTABLE_PATH) {
 
 async function automate(bot: ShufersalBot, username: string, password: string) {
   const session = await bot.createSession(username, password);
+
+  const searchResults = await session.searchProducts('milk', 5);
+  console.log(`Found ${searchResults.totalResults} products for "milk"`);
+  console.log('First 5 results:');
+  searchResults.results.forEach((product, index) => {
+    console.log(
+      `${index + 1}. ${product.name} - ${product.formattedPrice} (${product.inStock ? 'In Stock' : 'Out of Stock'})`,
+    );
+  });
+
   const orders = await session.getOrders();
   const lastOrder = orders.closedOrders[0];
   if (lastOrder) {

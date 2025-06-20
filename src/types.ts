@@ -241,8 +241,8 @@ export interface ShufersalProduct extends ShufersalBase {
   unitDescription: string | null;
   depositPrice?: number;
   unit: ShufersalProductUnit;
-  commercialCategoryGroup: ShufersalBase;
-  commercialCategorySubGroup: ShufersalBase;
+  commercialCategoryGroup: ShufersalBase | null;
+  commercialCategorySubGroup: ShufersalBase | null;
   secondLevelCategory: string | null;
   cartStatus: {
     inCart: boolean;
@@ -333,6 +333,9 @@ export interface ShufersalProductSearchResult extends ShufersalBase {
     comment?: string;
     cartEntryNumber?: number;
   };
+  commercialCategoryGroup: ShufersalBase | null;
+  commercialCategorySubGroup: ShufersalBase | null;
+  secondLevelCategory?: string | null;
 }
 
 export interface ShufersalProductSearchResponse {
@@ -404,10 +407,12 @@ export enum SellingMethod {
 export interface Product {
   code: string;
   name: string;
-  mainCategory: Category;
-  subCategory: Category;
+  mainCategory: Category | null;
+  subCategory: Category | null;
   sellingMethod: SellingMethod;
   inStock: boolean;
+  price: number;
+  formattedPrice: string;
   rawData: unknown;
 }
 
@@ -452,4 +457,12 @@ export interface DeliveryTimeSlot {
   code: string;
   dateTime: string;
   rawData: unknown;
+}
+
+export interface SearchResults {
+  results: Product[];
+  totalResults: number;
+  currentPage: number;
+  totalPages: number;
+  pageSize: number;
 }
