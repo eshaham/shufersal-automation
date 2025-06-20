@@ -411,7 +411,7 @@ export class ShufersalSession {
     await this.page.waitForNavigation({ waitUntil: 'networkidle0' });
   }
 
-  async modifyOrder(code: string): Promise<void> {
+  async putOrderInUpdateMode(code: string): Promise<void> {
     await this.loginIfNeeded();
 
     await this.apiRequest('GET', `cart/cartFromOrder/${code}`);
