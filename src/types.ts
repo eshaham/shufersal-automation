@@ -426,7 +426,7 @@ export interface ExistingCartItem extends Item {
   inStock: boolean;
 }
 
-export interface CartItemToAdd extends Item {
+export interface CartItemToAdd extends Omit<Item, 'rawData'> {
   sellingMethod: SellingMethod;
 }
 
