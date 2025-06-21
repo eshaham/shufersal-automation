@@ -414,7 +414,7 @@ export class ShufersalSession {
   async putOrderInUpdateMode(code: string): Promise<void> {
     await this.loginIfNeeded();
 
-    await this.apiRequest('GET', `cart/cartFromOrder/${code}`);
+    await this.apiRequest('GET', `/cart/cartFromOrder/${code}`);
   }
 
   private async checkOrderInUpdateMode(orderCode: string): Promise<boolean> {
