@@ -320,6 +320,12 @@ export class ShufersalSession {
     });
   }
 
+  async clearCart(): Promise<void> {
+    await this.loginIfNeeded();
+
+    await this.apiRequest('POST', '/cart/remove');
+  }
+
   async getCartItems(): Promise<ExistingCartItem[]> {
     await this.loginIfNeeded();
 
