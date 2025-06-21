@@ -418,11 +418,20 @@ export class ShufersalSession {
   }
 
   private async checkOrderInUpdateMode(orderCode: string): Promise<boolean> {
-    await this.page.goto(`${BASE_URL}/cart/load?restoreCart=true`);
-
-    const textContent = await this.page.evaluate(
-      () => document.body.textContent || '',
-    );
+    const textContent = await this.page.evaluate(async (url) => {
+      const response = await fetch(url, {
+        method: 'GET',
+        mode: 'cors',
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
+      const html = await response.text();
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      return doc.body.textContent || '';
+    }, `${BASE_URL}/cart/load?restoreCart=true`);
     const updateText = `עדכון הזמנה מס׳ ${orderCode}`;
 
     return textContent.includes(updateText);
