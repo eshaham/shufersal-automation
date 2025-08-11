@@ -248,18 +248,19 @@ export class ShufersalSession {
       '/my-account/orders',
     );
 
-    const activeOrders: OrderInfo[] = [];
-    for (const order of accountOrders.activeOrders) {
-      const isBeingUpdated = await this.checkOrderInUpdateMode(order.code);
-      activeOrders.push(
-        shufersalAccountOrderToOrderInfo(order, isBeingUpdated),
-      );
-    }
-
+    const orderInUpdateMode = await this.getOrderInUpdateMode();
     return {
-      activeOrders,
+      activeOrders: accountOrders.activeOrders.map((order) =>
+        shufersalAccountOrderToOrderInfo(
+          order,
+          order.code === orderInUpdateMode,
+        ),
+      ),
       closedOrders: accountOrders.closedOrders.map((order) =>
-        shufersalAccountOrderToOrderInfo(order),
+        shufersalAccountOrderToOrderInfo(
+          order,
+          order.code === orderInUpdateMode,
+        ),
       ),
     };
   }
@@ -272,9 +273,8 @@ export class ShufersalSession {
       `/my-account/orders/${code}`,
     );
 
-    const isBeingUpdated = orderDetails.isActive
-      ? await this.checkOrderInUpdateMode(code)
-      : false;
+    const orderInUpdateMode = await this.getOrderInUpdateMode();
+    const isBeingUpdated = orderInUpdateMode === code;
 
     const order = shufersalAccountOrderToOrderInfo(
       orderDetails,
@@ -441,7 +441,7 @@ export class ShufersalSession {
     await this.apiRequest('GET', `/cart/cartFromOrder/${code}`);
   }
 
-  private async checkOrderInUpdateMode(orderCode: string): Promise<boolean> {
+  private async getOrderInUpdateMode(): Promise<string | null> {
     const textContent = await this.page.evaluate(async (url) => {
       const response = await fetch(url, {
         method: 'GET',
@@ -456,9 +456,9 @@ export class ShufersalSession {
       const doc = parser.parseFromString(html, 'text/html');
       return doc.body.textContent || '';
     }, `${BASE_URL}/cart/load?restoreCart=true`);
-    const updateText = `עדכון הזמנה מס׳ ${orderCode}`;
 
-    return textContent.includes(updateText);
+    const match = textContent.match(/עדכון הזמנה מס׳ (\d+)/);
+    return match ? match[1] : null;
   }
 
   async takeScreenshot(): Promise<Buffer> {
