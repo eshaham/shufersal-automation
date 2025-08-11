@@ -405,7 +405,10 @@ export class ShufersalSession {
     });
     await this.page.click('.miglog-cart-summary-checkoutLink');
 
-    await this.page.waitForSelector('#j_password', { visible: true });
+    await this.page.waitForSelector('#j_password', {
+      visible: true,
+      timeout: 60_000,
+    });
     await this.page.type('#j_password', this.credentials.password, {
       delay: 100,
     });
