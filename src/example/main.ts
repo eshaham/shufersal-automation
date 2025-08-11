@@ -73,6 +73,7 @@ async function automate(bot: ShufersalBot, username: string, password: string) {
 (async () => {
   const bot = new ShufersalBot({
     executablePath: EXECUTABLE_PATH,
+    headless: false,
   });
   try {
     await automate(bot, USERNAME, PASSWORD);
