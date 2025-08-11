@@ -26,7 +26,7 @@ async function automate(bot: ShufersalBot, username: string, password: string) {
     );
   });
 
-  const specificProduct = await session.getProductByCode('P_8004399331396');
+  const specificProduct = await session.getProductByCode('P_4127329');
   if (specificProduct) {
     console.log(
       `\nFound specific product: ${specificProduct.name} - ${specificProduct.formattedPrice}`,
