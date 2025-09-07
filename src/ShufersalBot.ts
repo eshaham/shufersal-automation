@@ -465,6 +465,10 @@ export class ShufersalSession {
     return this.page.screenshot() as Promise<Buffer>;
   }
 
+  async verifySessionAlive(): Promise<void> {
+    await this.page.evaluate(() => document.title);
+  }
+
   async close(): Promise<void> {
     await this.context.close();
   }
