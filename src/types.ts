@@ -423,6 +423,7 @@ export interface Item {
 }
 
 export interface ExistingCartItem extends Item {
+  productName: string;
   inStock: boolean;
 }
 

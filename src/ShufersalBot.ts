@@ -154,6 +154,7 @@ function shufersalCartItemToItem(
 ): ExistingCartItem {
   return {
     productCode: cartItem.productCode,
+    productName: cartItem.productName,
     quantity: cartItem.cartyQty,
     inStock: cartItem.recommendation !== 'SWITCH',
     rawData: cartItem,
