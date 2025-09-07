@@ -430,6 +430,22 @@ export class ShufersalSession {
     await this.page.click('#checkoutPwd button[type="submit"]');
 
     await this.page.waitForNavigation({ waitUntil: 'networkidle0' });
+
+    const missingProductsModal = await this.page
+      .waitForSelector('#missingProducts', {
+        visible: true,
+        timeout: 5_000,
+      })
+      .catch(() => null);
+
+    if (missingProductsModal) {
+      await this.page.click('#missingProducts .bottomContainer button');
+      await this.page.waitForSelector('#missingProducts', {
+        hidden: true,
+        timeout: 5_000,
+      });
+    }
+
     await this.page.click('.btnConfirm');
 
     await this.page.waitForNavigation({ waitUntil: 'networkidle0' });
