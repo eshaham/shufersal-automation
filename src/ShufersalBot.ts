@@ -478,6 +478,28 @@ export class ShufersalSession {
     return match ? match[1] : null;
   }
 
+  async sendReceipt(orderNumber: string, email: string): Promise<void> {
+    await this.loginIfNeeded();
+
+    const orders = await this.getOrders();
+    const allOrders = [...orders.activeOrders, ...orders.closedOrders];
+    const order = allOrders.find(o => o.code === orderNumber);
+    
+    if (!order) {
+      throw new Error(`Order ${orderNumber} not found`);
+    }
+    
+    if (order.isActive) {
+      throw new Error(`Cannot send receipt for order ${orderNumber}: order is still active`);
+    }
+
+    await this.apiRequest(
+      'POST', 
+      `/emailInvoice/sendEmalInvoice?orderNum=${orderNumber}&email=${encodeURIComponent(email)}`,
+      { uuid: email }
+    );
+  }
+
   async takeScreenshot(): Promise<Buffer> {
     return this.page.screenshot() as Promise<Buffer>;
   }
