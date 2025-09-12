@@ -415,10 +415,6 @@ export class ShufersalSession {
 
     if (giftModal) {
       await this.page.click('#giftProductsModal .btnClose');
-      await this.page.waitForSelector('#giftProductsModal', {
-        hidden: true,
-        timeout: 5_000,
-      });
     }
 
     await this.page.waitForSelector('#j_password', {
@@ -483,20 +479,22 @@ export class ShufersalSession {
 
     const orders = await this.getOrders();
     const allOrders = [...orders.activeOrders, ...orders.closedOrders];
-    const order = allOrders.find(o => o.code === orderNumber);
-    
+    const order = allOrders.find((o) => o.code === orderNumber);
+
     if (!order) {
       throw new Error(`Order ${orderNumber} not found`);
     }
-    
+
     if (order.isActive) {
-      throw new Error(`Cannot send receipt for order ${orderNumber}: order is still active`);
+      throw new Error(
+        `Cannot send receipt for order ${orderNumber}: order is still active`,
+      );
     }
 
     await this.apiRequest(
-      'POST', 
+      'POST',
       `/emailInvoice/sendEmalInvoice?orderNum=${orderNumber}&email=${encodeURIComponent(email)}`,
-      { uuid: email }
+      { uuid: email },
     );
   }
 
