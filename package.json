@@ -6,9 +6,12 @@
   "scripts": {
     "dev": "cd src/example && npx tsx --inspect-brk main.ts",
     "start": "cd src/example && npx tsx main.ts",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
-    "prepare": "husky"
+    "prepare": "husky",
+    "typecheck": "tsc --noEmit"
   },
   "repository": {
     "type": "git",
