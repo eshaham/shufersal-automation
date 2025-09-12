@@ -7,7 +7,8 @@
     "dev": "cd src/example && npx tsx --inspect-brk main.ts",
     "start": "cd src/example && npx tsx main.ts",
     "lint": "eslint src",
-    "lint:fix": "eslint src --fix"
+    "lint:fix": "eslint src --fix",
+    "prepare": "husky"
   },
   "repository": {
     "type": "git",
@@ -28,6 +29,8 @@
     "@types/node": "^22.13.4",
     "dotenv": "^16.4.7",
     "eslint": "^9.20.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.6",
     "prettier": "^3.5.1",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",
