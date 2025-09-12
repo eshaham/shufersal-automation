@@ -507,7 +507,17 @@ export class ShufersalSession {
   }
 
   async close(): Promise<void> {
-    await this.context.close();
+    try {
+      await this.context.close();
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        !error.message?.includes('Connection closed') &&
+        !error.message?.includes('Protocol error')
+      ) {
+        throw error;
+      }
+    }
   }
 
   private async loginIfNeeded() {
