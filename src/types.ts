@@ -394,7 +394,7 @@ export interface ShufersalAvailableTimeSlotsResponse {
   [date: string]: ShufersalTimeSlot[];
 }
 
-export interface Category {
+export interface NamedEntity {
   code: string;
   name: string;
 }
@@ -407,8 +407,10 @@ export enum SellingMethod {
 export interface Product {
   code: string;
   name: string;
-  mainCategory: Category | null;
-  subCategory: Category | null;
+  description: string;
+  brand: NamedEntity | null;
+  mainCategory: NamedEntity | null;
+  subCategory: NamedEntity | null;
   sellingMethod: SellingMethod;
   inStock: boolean;
   price: number;

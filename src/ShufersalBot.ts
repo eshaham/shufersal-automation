@@ -63,6 +63,8 @@ function shufersalProductSearchResultToProduct(
   return {
     code: result.code,
     name: result.name,
+    description: result.description,
+    brand: result.brand,
     mainCategory,
     subCategory,
     sellingMethod,
@@ -114,6 +116,8 @@ function shufersalProductToProduct(product: ShufersalProduct): Product {
   return {
     code: product.code,
     name: product.name,
+    description: product.description,
+    brand: product.brand,
     mainCategory: product.commercialCategoryGroup,
     subCategory: product.commercialCategorySubGroup,
     sellingMethod:
