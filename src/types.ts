@@ -441,6 +441,9 @@ export interface ItemDetails extends Item {
 export interface OrderInfo {
   code: string;
   deliveryDateTime: string;
+  totalPrice: number;
+  totalPriceWithTax: number;
+  totalTax: number;
   isUpdatable: boolean;
   isActive: boolean;
   isCancelable: boolean;

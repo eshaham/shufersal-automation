@@ -104,6 +104,9 @@ function shufersalAccountOrderToOrderInfo(
   return {
     code: order.code,
     deliveryDateTime: dateTime.toISOString(),
+    totalPrice: order.totalPrice.value,
+    totalPriceWithTax: order.totalPriceWithTax.value,
+    totalTax: order.totalTax.value,
     isActive: order.isActive,
     isCancelable: order.isCancelable,
     isUpdatable: order.isUpdatable,
