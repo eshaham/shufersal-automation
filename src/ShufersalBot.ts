@@ -8,6 +8,7 @@ import {
   ItemDetails,
   OrderDetails,
   OrderInfo,
+  OrderStatus,
   Product,
   SearchResults,
   SellingMethod,
@@ -101,10 +102,21 @@ function shufersalAccountOrderToOrderInfo(
   isBeingUpdated: boolean = false,
 ): OrderInfo {
   const dateTime = extractDeliveryDateTimeFromShufersalOrder(order);
+
+  let status: OrderStatus;
+  if (order.status.code === 'CANCELLED_SENT_TO_ERP') {
+    status = OrderStatus.Canceled;
+  } else if (order.status.code === 'DELIVERED') {
+    status = OrderStatus.Delivered;
+  } else {
+    status = OrderStatus.Active;
+  }
+
   return {
     code: order.code,
     deliveryDateTime: dateTime.toISOString(),
     totalPrice: order.totalPrice.value,
+    status,
     isActive: order.isActive,
     isCancelable: order.isCancelable,
     isUpdatable: order.isUpdatable,

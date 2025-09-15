@@ -138,7 +138,7 @@ export interface ShufersalPaymentInfo {
 }
 
 export interface ShufersalOrderStatus {
-  code: 'RECEIVED' | 'PICKING' | 'DELIVERED';
+  code: 'RECEIVED' | 'PICKING' | 'DELIVERED' | 'CANCELLED_SENT_TO_ERP';
   type: 'OrderStatus';
 }
 
@@ -404,6 +404,12 @@ export enum SellingMethod {
   Weight = 'WEIGHT',
 }
 
+export enum OrderStatus {
+  Active = 'ACTIVE',
+  Delivered = 'DELIVERED',
+  Canceled = 'CANCELED',
+}
+
 export interface Product {
   code: string;
   name: string;
@@ -442,6 +448,7 @@ export interface OrderInfo {
   code: string;
   deliveryDateTime: string;
   totalPrice: number;
+  status: OrderStatus;
   isUpdatable: boolean;
   isActive: boolean;
   isCancelable: boolean;
