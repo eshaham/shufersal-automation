@@ -50,6 +50,9 @@ declare global {
 
 const BASE_URL = 'https://www.shufersal.co.il/online/he';
 
+const NAVIGATION_TIMEOUT = 30_000;
+const ACTION_TIMEOUT = 10_000;
+
 function shufersalProductSearchResultToProduct(
   result: ShufersalProductSearchResult,
 ): Product {
@@ -230,6 +233,39 @@ export class ShufersalSession {
     private credentials: ShufersalCredentials,
   ) {}
 
+  async performLogin(): Promise<void> {
+    await this.page.goto(`${BASE_URL}/login`, {
+      waitUntil: 'domcontentloaded',
+      timeout: NAVIGATION_TIMEOUT,
+    });
+
+    await this.page.waitForSelector('#j_username', {
+      visible: true,
+      timeout: ACTION_TIMEOUT,
+    });
+    await this.page.waitForSelector('#j_password', {
+      visible: true,
+      timeout: ACTION_TIMEOUT,
+    });
+    await this.page.waitForSelector('.btn-login', {
+      visible: true,
+      timeout: ACTION_TIMEOUT,
+    });
+
+    await this.page.type('#j_username', this.credentials.username);
+    await this.page.type('#j_password', this.credentials.password);
+    await this.page.click('.btn-login');
+
+    await this.page.waitForNavigation({
+      waitUntil: 'domcontentloaded',
+      timeout: NAVIGATION_TIMEOUT,
+    });
+
+    await this.page.waitForFunction(() => window.ACC?.config?.CSRFToken, {
+      timeout: 10000,
+    });
+  }
+
   async searchProducts(
     query: string,
     limit: number = 20,
@@ -402,7 +438,7 @@ export class ShufersalSession {
     const giftModal = await this.page
       .waitForSelector('#giftProductsModal', {
         visible: true,
-        timeout: 10_000,
+        timeout: ACTION_TIMEOUT,
       })
       .catch(() => null);
 
@@ -509,44 +545,6 @@ export class ShufersalSession {
     }
   }
 
-  private async performLogin(): Promise<void> {
-    await this.page.goto(`${BASE_URL}/login`, {
-      waitUntil: 'domcontentloaded',
-    });
-
-    await this.page.waitForSelector('#j_username', {
-      visible: true,
-      timeout: 10000,
-    });
-    await this.page.waitForSelector('#j_password', {
-      visible: true,
-      timeout: 10000,
-    });
-    await this.page.waitForSelector('.btn-login', {
-      visible: true,
-      timeout: 10000,
-    });
-
-    await this.page.type('#j_username', this.credentials.username);
-    await this.page.type('#j_password', this.credentials.password);
-    await this.page.click('.btn-login');
-    await this.page.waitForNavigation({ waitUntil: 'domcontentloaded' });
-
-    await this.page.waitForFunction(() => window.ACC?.config?.CSRFToken, {
-      timeout: 10000,
-    });
-  }
-
-  private async checkIfLoggedIn(): Promise<boolean> {
-    const loginState = await this.page.evaluate(() => {
-      const loggedInElement = document.querySelector('.title-notAnonymous');
-      const logoutLink = document.querySelector('.log-out a');
-      return !!loggedInElement || !!logoutLink;
-    });
-
-    return loginState;
-  }
-
   private async apiRequest<T extends object | undefined>(
     method: 'GET' | 'POST',
     path: string,
@@ -606,7 +604,6 @@ export class ShufersalSession {
     }
   }
 }
-
 export class ShufersalBot {
   private browser: Browser | undefined;
 
@@ -619,11 +616,15 @@ export class ShufersalBot {
     const context = await this.createContext();
     const page = await context.newPage();
 
-    await page.goto(`${BASE_URL}`, { waitUntil: 'domcontentloaded' });
+    await page.goto(`${BASE_URL}`, {
+      waitUntil: 'domcontentloaded',
+      timeout: NAVIGATION_TIMEOUT,
+    });
 
-    await this.performLogin(page, username, password);
+    const session = new ShufersalSession(context, page, { username, password });
+    await session.performLogin();
 
-    return new ShufersalSession(context, page, { username, password });
+    return session;
   }
 
   async terminate(): Promise<void> {
@@ -648,35 +649,5 @@ export class ShufersalBot {
 
     const context = await this.browser.createBrowserContext();
     return context;
-  }
-
-  private async performLogin(
-    page: Page,
-    username: string,
-    password: string,
-  ): Promise<void> {
-    await page.goto(`${BASE_URL}/login`, { waitUntil: 'domcontentloaded' });
-
-    await page.waitForSelector('#j_username', {
-      visible: true,
-      timeout: 10000,
-    });
-    await page.waitForSelector('#j_password', {
-      visible: true,
-      timeout: 10000,
-    });
-    await page.waitForSelector('.btn-login', { visible: true, timeout: 10000 });
-
-    await page.type('#j_username', username);
-    await page.type('#j_password', password);
-
-    await Promise.all([
-      page.waitForNavigation({ waitUntil: 'domcontentloaded' }),
-      page.click('.btn-login'),
-    ]);
-
-    await page.waitForFunction(() => window.ACC?.config?.CSRFToken, {
-      timeout: 10000,
-    });
   }
 }
