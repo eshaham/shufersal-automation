@@ -669,8 +669,11 @@ export class ShufersalBot {
 
     await page.type('#j_username', username);
     await page.type('#j_password', password);
-    await page.click('.btn-login');
-    await page.waitForNavigation({ waitUntil: 'domcontentloaded' });
+
+    await Promise.all([
+      page.waitForNavigation({ waitUntil: 'domcontentloaded' }),
+      page.click('.btn-login'),
+    ]);
 
     await page.waitForFunction(() => window.ACC?.config?.CSRFToken, {
       timeout: 10000,
