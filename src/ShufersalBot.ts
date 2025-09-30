@@ -224,8 +224,6 @@ function cartItemToShufersalCartItemAdd(
 }
 
 export class ShufersalSession {
-  private isLoggedIn = false;
-
   constructor(
     private context: BrowserContext,
     private page: Page,
@@ -237,8 +235,6 @@ export class ShufersalSession {
     limit: number = 20,
     page: number = 0,
   ): Promise<SearchResults> {
-    await this.loginIfNeeded();
-
     const searchQuery = `${encodeURIComponent(query)}:relevance`;
     const response = await this.apiRequest<ShufersalProductSearchResponse>(
       'GET',
@@ -259,8 +255,6 @@ export class ShufersalSession {
   }
 
   async getOrders(): Promise<AccountOrders> {
-    await this.loginIfNeeded();
-
     const accountOrders = await this.apiRequest<ShufersalAccountOrders>(
       'GET',
       '/my-account/orders',
@@ -284,8 +278,6 @@ export class ShufersalSession {
   }
 
   async getOrderDetails(code: string): Promise<OrderDetails> {
-    await this.loginIfNeeded();
-
     const orderDetails = await this.apiRequest<ShufersalOrderDetails>(
       'GET',
       `/my-account/orders/${code}`,
@@ -306,8 +298,6 @@ export class ShufersalSession {
   }
 
   async addToCart(items: CartItemToAdd[]): Promise<void> {
-    await this.loginIfNeeded();
-
     const shufersalCartEntries = items.map((item) =>
       cartItemToShufersalCartItemAdd(item),
     );
@@ -315,8 +305,6 @@ export class ShufersalSession {
   }
 
   async removeFromCart(productCode: string): Promise<void> {
-    await this.loginIfNeeded();
-
     const cartItems = await this.getCartItems();
     const cartItem = cartItems.find((item) => item.productCode === productCode);
 
@@ -339,14 +327,10 @@ export class ShufersalSession {
   }
 
   async clearCart(): Promise<void> {
-    await this.loginIfNeeded();
-
     await this.apiRequest('POST', '/cart/remove');
   }
 
   async getCartItems(): Promise<ExistingCartItem[]> {
-    await this.loginIfNeeded();
-
     const cartItems = await this.apiRequest<ShufersalCartItem[]>(
       'GET',
       '/recommendations/entry-recommendations',
@@ -355,8 +339,6 @@ export class ShufersalSession {
   }
 
   async getAvailableTimeSlots(): Promise<DeliveryTimeSlot[]> {
-    await this.loginIfNeeded();
-
     const response = await this.apiRequest<ShufersalAvailableTimeSlotsResponse>(
       'GET',
       '/timeSlot/preselection/getHomeDeliverySlots',
@@ -365,8 +347,6 @@ export class ShufersalSession {
   }
 
   async getSelectedTimeSlot(): Promise<DeliveryTimeSlot | null> {
-    await this.loginIfNeeded();
-
     const shufersalTimeSlot = await this.apiRequest<ShufersalTimeSlot>(
       'GET',
       '/timeSlot/preselection/getSelectedTimeslot',
@@ -378,8 +358,6 @@ export class ShufersalSession {
   }
 
   async selectTimeSlot(timeSlotCode: string): Promise<void> {
-    await this.loginIfNeeded();
-
     const availableTimeSlots = await this.getAvailableTimeSlots();
     const timeSlot = availableTimeSlots.find(
       (slot) => slot.code === timeSlotCode,
@@ -397,8 +375,6 @@ export class ShufersalSession {
   }
 
   async createOrder(removeMissingItems: boolean): Promise<void> {
-    await this.loginIfNeeded();
-
     const cartItems = await this.getCartItems();
     const missingItems = cartItems.filter((item) => !item.inStock);
     if (missingItems.length > 0) {
@@ -466,8 +442,6 @@ export class ShufersalSession {
   }
 
   async putOrderInUpdateMode(code: string): Promise<void> {
-    await this.loginIfNeeded();
-
     await this.apiRequest('GET', `/cart/cartFromOrder/${code}`);
   }
 
@@ -492,8 +466,6 @@ export class ShufersalSession {
   }
 
   async sendReceipt(orderNumber: string, email: string): Promise<void> {
-    await this.loginIfNeeded();
-
     const orders = await this.getOrders();
     const allOrders = [...orders.activeOrders, ...orders.closedOrders];
     const order = allOrders.find((o) => o.code === orderNumber);
@@ -537,16 +509,42 @@ export class ShufersalSession {
     }
   }
 
-  private async loginIfNeeded() {
-    if (!this.isLoggedIn) {
-      await this.page.goto(`${BASE_URL}/login`);
-      await this.page.type('#j_username', this.credentials.username);
-      await this.page.type('#j_password', this.credentials.password);
-      await this.page.click('.btn-login');
-      await this.page.waitForNavigation();
+  private async performLogin(): Promise<void> {
+    await this.page.goto(`${BASE_URL}/login`, {
+      waitUntil: 'domcontentloaded',
+    });
 
-      this.isLoggedIn = true;
-    }
+    await this.page.waitForSelector('#j_username', {
+      visible: true,
+      timeout: 10000,
+    });
+    await this.page.waitForSelector('#j_password', {
+      visible: true,
+      timeout: 10000,
+    });
+    await this.page.waitForSelector('.btn-login', {
+      visible: true,
+      timeout: 10000,
+    });
+
+    await this.page.type('#j_username', this.credentials.username);
+    await this.page.type('#j_password', this.credentials.password);
+    await this.page.click('.btn-login');
+    await this.page.waitForNavigation({ waitUntil: 'domcontentloaded' });
+
+    await this.page.waitForFunction(() => window.ACC?.config?.CSRFToken, {
+      timeout: 10000,
+    });
+  }
+
+  private async checkIfLoggedIn(): Promise<boolean> {
+    const loginState = await this.page.evaluate(() => {
+      const loggedInElement = document.querySelector('.title-notAnonymous');
+      const logoutLink = document.querySelector('.log-out a');
+      return !!loggedInElement || !!logoutLink;
+    });
+
+    return loginState;
   }
 
   private async apiRequest<T extends object | undefined>(
@@ -554,34 +552,58 @@ export class ShufersalSession {
     path: string,
     body?: unknown,
   ) {
-    const data = await this.page.evaluate(
-      async (url, method, body) => {
-        const csrftoken = window.ACC.config.CSRFToken;
-        const response = await fetch(url, {
-          headers: {
-            'content-type': 'application/json',
-            csrftoken,
-          },
-          method,
-          body: body ? JSON.stringify(body) : undefined,
-          mode: 'cors',
-          credentials: 'include',
-        });
-        if (!response.ok) {
-          throw new Error(`Request failed with status ${response.status}`);
-        }
-        if (
-          response.headers.get('content-type')?.includes('application/json')
-        ) {
-          const data = await response.json();
-          return data;
-        }
-      },
-      `${BASE_URL}${path}`,
-      method,
-      body,
-    );
-    return data as T;
+    const makeRequest = async (): Promise<T> => {
+      const data = await this.page.evaluate(
+        async (url, method, body) => {
+          const csrftoken = window.ACC.config.CSRFToken;
+          const response = await fetch(url, {
+            headers: {
+              'content-type': 'application/json',
+              csrftoken,
+            },
+            method,
+            body: body ? JSON.stringify(body) : undefined,
+            mode: 'cors',
+            credentials: 'include',
+            redirect: 'manual',
+          });
+
+          if (
+            response.type === 'opaqueredirect' ||
+            (response.status >= 300 && response.status < 400)
+          ) {
+            const location = response.headers.get('location');
+            if (location && location.includes('/login')) {
+              throw new Error('REDIRECT_TO_LOGIN');
+            }
+          }
+
+          if (!response.ok) {
+            throw new Error(`Request failed with status ${response.status}`);
+          }
+
+          if (
+            response.headers.get('content-type')?.includes('application/json')
+          ) {
+            return await response.json();
+          }
+        },
+        `${BASE_URL}${path}`,
+        method,
+        body,
+      );
+      return data as T;
+    };
+
+    try {
+      return await makeRequest();
+    } catch (error) {
+      if (error instanceof Error && error.message === 'REDIRECT_TO_LOGIN') {
+        await this.performLogin();
+        return await makeRequest();
+      }
+      throw error;
+    }
   }
 }
 
@@ -596,6 +618,10 @@ export class ShufersalBot {
   ): Promise<ShufersalSession> {
     const context = await this.createContext();
     const page = await context.newPage();
+
+    await page.goto(`${BASE_URL}`, { waitUntil: 'domcontentloaded' });
+
+    await this.performLogin(page, username, password);
 
     return new ShufersalSession(context, page, { username, password });
   }
@@ -622,5 +648,32 @@ export class ShufersalBot {
 
     const context = await this.browser.createBrowserContext();
     return context;
+  }
+
+  private async performLogin(
+    page: Page,
+    username: string,
+    password: string,
+  ): Promise<void> {
+    await page.goto(`${BASE_URL}/login`, { waitUntil: 'domcontentloaded' });
+
+    await page.waitForSelector('#j_username', {
+      visible: true,
+      timeout: 10000,
+    });
+    await page.waitForSelector('#j_password', {
+      visible: true,
+      timeout: 10000,
+    });
+    await page.waitForSelector('.btn-login', { visible: true, timeout: 10000 });
+
+    await page.type('#j_username', username);
+    await page.type('#j_password', password);
+    await page.click('.btn-login');
+    await page.waitForNavigation({ waitUntil: 'domcontentloaded' });
+
+    await page.waitForFunction(() => window.ACC?.config?.CSRFToken, {
+      timeout: 10000,
+    });
   }
 }
