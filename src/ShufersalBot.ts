@@ -12,6 +12,7 @@ import {
   Product,
   SearchResults,
   SellingMethod,
+  SerializedSessionData,
   ShufersalAccountOrders,
   ShufersalAvailableTimeSlotsResponse,
   ShufersalCartItem,
@@ -28,7 +29,8 @@ import {
 import puppeteer, { Browser, BrowserContext, Page } from 'puppeteer-core';
 
 interface ShufersalBotOptions {
-  executablePath: string;
+  executablePath?: string;
+  browserWSEndpoint?: string;
   headless?: boolean;
   chromiumArgs?: string[];
 }
@@ -48,7 +50,8 @@ declare global {
   }
 }
 
-const BASE_URL = 'https://www.shufersal.co.il/online/he';
+const BASE_DOMAIN = 'https://www.shufersal.co.il';
+const BASE_URL = `${BASE_DOMAIN}/online/he`;
 
 const NAVIGATION_TIMEOUT = 30_000;
 const ACTION_TIMEOUT = 10_000;
@@ -531,6 +534,11 @@ export class ShufersalSession {
     await this.page.evaluate(() => document.title);
   }
 
+  async serialize(): Promise<SerializedSessionData> {
+    const cookies = await this.context.cookies();
+    return { cookies };
+  }
+
   async close(): Promise<void> {
     try {
       await this.context.close();
@@ -612,6 +620,7 @@ export class ShufersalBot {
   async createSession(
     username: string,
     password: string,
+    sessionData?: SerializedSessionData,
   ): Promise<ShufersalSession> {
     const context = await this.createContext();
     const page = await context.newPage();
@@ -622,7 +631,12 @@ export class ShufersalBot {
     });
 
     const session = new ShufersalSession(context, page, { username, password });
-    await session.performLogin();
+
+    if (sessionData) {
+      await this.restoreSession(context, page, sessionData);
+    } else {
+      await session.performLogin();
+    }
 
     return session;
   }
@@ -635,11 +649,25 @@ export class ShufersalBot {
 
   private async initIfNeeded() {
     if (!this.browser) {
-      this.browser = await puppeteer.launch({
-        executablePath: this.options.executablePath,
-        headless: 'headless' in this.options ? this.options.headless : true,
-        args: this.options.chromiumArgs,
-      });
+      if (this.options.browserWSEndpoint) {
+        console.log(
+          'Connecting to remote Chrome at:',
+          this.options.browserWSEndpoint,
+        );
+        this.browser = await puppeteer.connect({
+          browserWSEndpoint: this.options.browserWSEndpoint,
+        });
+      } else {
+        console.log(
+          'Launching local Chrome from:',
+          this.options.executablePath,
+        );
+        this.browser = await puppeteer.launch({
+          executablePath: this.options.executablePath,
+          headless: 'headless' in this.options ? this.options.headless : true,
+          args: this.options.chromiumArgs,
+        });
+      }
     }
   }
 
@@ -649,5 +677,26 @@ export class ShufersalBot {
 
     const context = await this.browser.createBrowserContext();
     return context;
+  }
+
+  private async restoreSession(
+    context: BrowserContext,
+    page: Page,
+    sessionData: SerializedSessionData,
+  ): Promise<void> {
+    for (const cookie of sessionData.cookies as Array<
+      Parameters<BrowserContext['setCookie']>[0]
+    >) {
+      await context.setCookie(cookie);
+    }
+
+    await page.goto(BASE_URL, {
+      waitUntil: 'domcontentloaded',
+      timeout: NAVIGATION_TIMEOUT,
+    });
+
+    await page.waitForFunction(() => window.ACC?.config?.CSRFToken, {
+      timeout: 10000,
+    });
   }
 }

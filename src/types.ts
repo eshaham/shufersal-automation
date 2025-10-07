@@ -478,3 +478,7 @@ export interface SearchResults {
   totalPages: number;
   pageSize: number;
 }
+
+export interface SerializedSessionData {
+  cookies: unknown[];
+}
