@@ -236,6 +236,14 @@ export class ShufersalSession {
     private credentials: ShufersalCredentials,
   ) {}
 
+  get browserContext(): BrowserContext {
+    return this.context;
+  }
+
+  get browserPage(): Page {
+    return this.page;
+  }
+
   async performLogin(): Promise<void> {
     await this.page.goto(`${BASE_URL}/login`, {
       waitUntil: 'domcontentloaded',
@@ -644,23 +652,25 @@ export class ShufersalBot {
     password: string,
     sessionData?: SerializedSessionData,
   ): Promise<ShufersalSession> {
-    const context = await this.createContext();
-    const page = await context.newPage();
-
-    await page.goto(BASE_URL, {
-      waitUntil: 'domcontentloaded',
-      timeout: NAVIGATION_TIMEOUT,
-    });
-
-    const session = new ShufersalSession(context, page, { username, password });
+    const session = await this.initSession(username, password);
 
     if (sessionData) {
-      await this.restoreSession(context, page, sessionData);
+      await this.restoreSession(session, sessionData);
     } else {
       await session.performLogin();
     }
 
     return session;
+  }
+
+  protected async initSession(
+    username: string,
+    password: string,
+  ): Promise<ShufersalSession> {
+    const context = await this.createContext();
+    const page = await context.newPage();
+
+    return new ShufersalSession(context, page, { username, password });
   }
 
   async terminate(): Promise<void> {
@@ -701,11 +711,13 @@ export class ShufersalBot {
     return context;
   }
 
-  private async restoreSession(
-    context: BrowserContext,
-    page: Page,
+  protected async restoreSession(
+    session: ShufersalSession,
     sessionData: SerializedSessionData,
   ): Promise<void> {
+    const context = session.browserContext;
+    const page = session.browserPage;
+
     for (const cookie of sessionData.cookies as Array<
       Parameters<BrowserContext['setCookie']>[0]
     >) {
