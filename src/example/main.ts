@@ -1,4 +1,4 @@
-import { ShufersalBot } from '@shufersal-automation';
+import { ShufersalBot, type OrderInfo } from '@shufersal-automation';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -18,11 +18,13 @@ async function automate(bot: ShufersalBot, username: string, password: string) {
   const session = await bot.createSession(username, password);
 
   const searchResults = await session.searchProducts('milk', 5);
-  console.log(`Found ${searchResults.totalResults} products for "milk"`);
+  console.log(
+    `Found ${String(searchResults.totalResults)} products for "milk"`,
+  );
   console.log('First 5 results:');
   searchResults.results.forEach((product, index) => {
     console.log(
-      `${index + 1}. ${product.name} - ${product.formattedPrice} (${product.inStock ? 'In Stock' : 'Out of Stock'})`,
+      `${String(index + 1)}. ${product.name} - ${product.formattedPrice} (${product.inStock ? 'In Stock' : 'Out of Stock'})`,
     );
   });
 
@@ -36,9 +38,13 @@ async function automate(bot: ShufersalBot, username: string, password: string) {
   }
 
   const orders = await session.getOrders();
-  const lastOrder = orders.closedOrders[0];
+  const lastOrder = orders.closedOrders[0] as OrderInfo | undefined;
   if (lastOrder) {
     const orderDetails = await session.getOrderDetails(lastOrder.code);
+    if (!orderDetails) {
+      console.log('Failed to get order details');
+      return;
+    }
     const firstItem = orderDetails.items[0];
 
     const cartItems = await session.getCartItems();
@@ -82,4 +88,4 @@ async function automate(bot: ShufersalBot, username: string, password: string) {
   } finally {
     await bot.terminate();
   }
-})();
+})().catch(console.error);

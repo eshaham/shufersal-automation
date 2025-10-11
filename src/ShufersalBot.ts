@@ -42,9 +42,9 @@ interface ShufersalCredentials {
 
 declare global {
   interface Window {
-    ACC: {
-      config: {
-        CSRFToken: string;
+    ACC?: {
+      config?: {
+        CSRFToken?: string;
       };
     };
   }
@@ -95,7 +95,7 @@ function shufersalProductSearchResponseToSearchResults(
 }
 
 function extractDeliveryDateTimeFromShufersalOrder(order: ShufersalOrder) {
-  if (order.consignments?.length !== 1) {
+  if (order.consignments.length !== 1) {
     throw new Error(`Unexpected number of consignments in order ${order.code}`);
   }
   const consignment = order.consignments[0];
@@ -277,8 +277,11 @@ export class ShufersalSession {
     const searchQuery = `${encodeURIComponent(query)}:relevance`;
     const response = await this.apiRequest<ShufersalProductSearchResponse>(
       'GET',
-      `/search/results?q=${searchQuery}&limit=${limit}&page=${page}`,
+      `/search/results?q=${searchQuery}&limit=${String(limit)}&page=${String(page)}`,
     );
+    if (!response) {
+      throw new Error('Failed to get search results');
+    }
     return shufersalProductSearchResponseToSearchResults(response);
   }
 
@@ -298,6 +301,9 @@ export class ShufersalSession {
       'GET',
       '/my-account/orders',
     );
+    if (!accountOrders) {
+      throw new Error('Failed to get orders');
+    }
 
     const orderInUpdateMode = await this.getOrderInUpdateMode();
     return {
@@ -316,11 +322,14 @@ export class ShufersalSession {
     };
   }
 
-  async getOrderDetails(code: string): Promise<OrderDetails> {
+  async getOrderDetails(code: string): Promise<OrderDetails | undefined> {
     const orderDetails = await this.apiRequest<ShufersalOrderDetails>(
       'GET',
       `/my-account/orders/${code}`,
     );
+    if (!orderDetails) {
+      return undefined;
+    }
 
     const orderInUpdateMode = await this.getOrderInUpdateMode();
     const isBeingUpdated = orderInUpdateMode === code;
@@ -374,6 +383,9 @@ export class ShufersalSession {
       'GET',
       '/recommendations/entry-recommendations',
     );
+    if (!cartItems) {
+      return [];
+    }
     return cartItems.map(shufersalCartItemToItem);
   }
 
@@ -382,14 +394,16 @@ export class ShufersalSession {
       'GET',
       '/timeSlot/preselection/getHomeDeliverySlots',
     );
+    if (!response) {
+      return [];
+    }
     return shufersalAvailableTimeslotsResponseToDeliveryTimeslots(response);
   }
 
   async getSelectedTimeSlot(): Promise<DeliveryTimeSlot | null> {
-    const shufersalTimeSlot = await this.apiRequest<ShufersalTimeSlot>(
-      'GET',
-      '/timeSlot/preselection/getSelectedTimeslot',
-    );
+    const shufersalTimeSlot = await this.apiRequest<
+      ShufersalTimeSlot | undefined
+    >('GET', '/timeSlot/preselection/getSelectedTimeslot');
     if (!shufersalTimeSlot || !shufersalTimeSlot.code) {
       return null;
     }
@@ -492,7 +506,9 @@ export class ShufersalSession {
         credentials: 'include',
       });
       if (!response.ok) {
-        throw new Error(`Request failed with status ${response.status}`);
+        throw new Error(
+          `Request failed with status ${String(response.status)}`,
+        );
       }
       const html = await response.text();
       const parser = new DOMParser();
@@ -545,8 +561,8 @@ export class ShufersalSession {
     } catch (error) {
       if (
         error instanceof Error &&
-        !error.message?.includes('Connection closed') &&
-        !error.message?.includes('Protocol error')
+        !error.message.includes('Connection closed') &&
+        !error.message.includes('Protocol error')
       ) {
         throw error;
       }
@@ -558,10 +574,13 @@ export class ShufersalSession {
     path: string,
     body?: unknown,
   ) {
-    const makeRequest = async (): Promise<T> => {
+    const makeRequest = async (): Promise<T | undefined> => {
       const data = await this.page.evaluate(
         async (url, method, body) => {
-          const csrftoken = window.ACC.config.CSRFToken;
+          const csrftoken = window.ACC?.config?.CSRFToken;
+          if (!csrftoken) {
+            throw new Error('CSRFToken not found');
+          }
           const response = await fetch(url, {
             headers: {
               'content-type': 'application/json',
@@ -585,20 +604,23 @@ export class ShufersalSession {
           }
 
           if (!response.ok) {
-            throw new Error(`Request failed with status ${response.status}`);
+            throw new Error(
+              `Request failed with status ${String(response.status)}`,
+            );
           }
 
           if (
             response.headers.get('content-type')?.includes('application/json')
           ) {
-            return await response.json();
+            return (await response.json()) as T;
           }
+          return undefined;
         },
         `${BASE_URL}${path}`,
         method,
         body,
       );
-      return data as T;
+      return data as T | undefined;
     };
 
     try {
@@ -625,7 +647,7 @@ export class ShufersalBot {
     const context = await this.createContext();
     const page = await context.newPage();
 
-    await page.goto(`${BASE_URL}`, {
+    await page.goto(BASE_URL, {
       waitUntil: 'domcontentloaded',
       timeout: NAVIGATION_TIMEOUT,
     });
