@@ -50,8 +50,8 @@ declare global {
   }
 }
 
-const BASE_DOMAIN = 'https://www.shufersal.co.il';
-const BASE_URL = `${BASE_DOMAIN}/online/he`;
+export const BASE_URL = 'https://www.shufersal.co.il';
+export const WEBAPP_URL = `${BASE_URL}/online/he`;
 
 const NAVIGATION_TIMEOUT = 30_000;
 const ACTION_TIMEOUT = 10_000;
@@ -245,7 +245,7 @@ export class ShufersalSession {
   }
 
   async performLogin(): Promise<void> {
-    await this.page.goto(`${BASE_URL}/login`, {
+    await this.page.goto(`${WEBAPP_URL}/login`, {
       waitUntil: 'domcontentloaded',
       timeout: NAVIGATION_TIMEOUT,
     });
@@ -452,7 +452,7 @@ export class ShufersalSession {
       }
     }
 
-    await this.page.goto(`${BASE_URL}/cart/cartsummary`);
+    await this.page.goto(`${WEBAPP_URL}/cart/cartsummary`);
 
     await this.page.waitForSelector('.miglog-cart-summary-checkoutLink', {
       timeout: 60_000,
@@ -522,7 +522,7 @@ export class ShufersalSession {
       const parser = new DOMParser();
       const doc = parser.parseFromString(html, 'text/html');
       return doc.body.textContent || '';
-    }, `${BASE_URL}/cart/load?restoreCart=true`);
+    }, `${WEBAPP_URL}/cart/load?restoreCart=true`);
 
     const match = textContent.match(/עדכון הזמנה מס׳ (\d+)/);
     return match ? match[1] : null;
@@ -624,7 +624,7 @@ export class ShufersalSession {
           }
           return undefined;
         },
-        `${BASE_URL}${path}`,
+        `${WEBAPP_URL}${path}`,
         method,
         body,
       );
@@ -724,7 +724,7 @@ export class ShufersalBot {
       await context.setCookie(cookie);
     }
 
-    await page.goto(BASE_URL, {
+    await page.goto(WEBAPP_URL, {
       waitUntil: 'domcontentloaded',
       timeout: NAVIGATION_TIMEOUT,
     });
