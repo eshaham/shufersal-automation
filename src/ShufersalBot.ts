@@ -25,7 +25,7 @@ import {
   ShufersalProductSearchResult,
   ShufersalSellingMethod,
   ShufersalTimeSlot,
-} from '@shufersal-automation';
+} from '~/types';
 import puppeteer, { Browser, BrowserContext, Page } from 'puppeteer-core';
 
 interface ShufersalBotOptions {

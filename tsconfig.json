@@ -2,6 +2,7 @@
   "compilerOptions": {
     "module": "commonjs",
     "outDir": "dist",
+    "rootDir": "src",
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "importHelpers": true,
@@ -12,12 +13,14 @@
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
     "declaration": true,
+    "declarationMap": true,
+    "composite": true,
     "esModuleInterop": true,
     "sourceMap": true,
     "types": ["node"],
-    "baseUrl": ".",
+    "baseUrl": "src",
     "paths": {
-      "@shufersal-automation": ["src/index.ts"]
+      "~/*": ["./*"]
     }
   },
   "include": ["src/**/*.ts"]

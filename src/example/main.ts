@@ -1,4 +1,4 @@
-import { ShufersalBot, type OrderInfo } from '@shufersal-automation';
+import { ShufersalBot, type OrderInfo } from '~/index';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -22,7 +22,7 @@ async function automate(bot: ShufersalBot, username: string, password: string) {
     `Found ${String(searchResults.totalResults)} products for "milk"`,
   );
   console.log('First 5 results:');
-  searchResults.results.forEach((product, index) => {
+  searchResults.results.forEach((product, index: number) => {
     console.log(
       `${String(index + 1)}. ${product.name} - ${product.formattedPrice} (${product.inStock ? 'In Stock' : 'Out of Stock'})`,
     );
@@ -49,7 +49,10 @@ async function automate(bot: ShufersalBot, username: string, password: string) {
 
     const cartItems = await session.getCartItems();
     if (
-      !cartItems.some((item) => item.productCode === firstItem.product.code)
+      !cartItems.some(
+        (item: { productCode: string }) =>
+          item.productCode === firstItem.product.code,
+      )
     ) {
       await session.addToCart([
         { ...firstItem, sellingMethod: firstItem.product.sellingMethod },
