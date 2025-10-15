@@ -562,6 +562,21 @@ export class ShufersalSession {
       });
     }
 
+    const over18Checkbox = await this.page
+      .waitForSelector('.over-18 .checkboxPic', {
+        visible: true,
+        timeout: 5_000,
+      })
+      .catch(() => null);
+
+    if (over18Checkbox) {
+      console.info(
+        'createOrder: Accepting over-18 checkbox for alcohol/restricted items',
+      );
+      await this.page.click('.over-18 .checkboxPic');
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+    }
+
     console.info('createOrder: Confirming order');
     await Promise.all([
       this.page.waitForNavigation({
