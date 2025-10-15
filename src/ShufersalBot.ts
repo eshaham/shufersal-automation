@@ -243,6 +243,13 @@ function cartItemToShufersalCartItemAdd(
   };
 }
 
+interface ApiRequestConfig {
+  method: 'GET' | 'POST';
+  path: string;
+  body?: unknown;
+  requiresCSRF?: boolean;
+}
+
 export class ShufersalSession {
   constructor(
     private context: BrowserContext,
@@ -306,10 +313,6 @@ export class ShufersalSession {
     if (errorModalOrNavigation === null) {
       throw new LoginTimeoutError();
     }
-
-    await this.page.waitForFunction(() => window.ACC?.config?.CSRFToken, {
-      timeout: 10000,
-    });
   }
 
   async searchProducts(
@@ -318,10 +321,10 @@ export class ShufersalSession {
     page: number = 0,
   ): Promise<SearchResults> {
     const searchQuery = `${encodeURIComponent(query)}:relevance`;
-    const response = await this.apiRequest<ShufersalProductSearchResponse>(
-      'GET',
-      `/search/results?q=${searchQuery}&limit=${String(limit)}&page=${String(page)}`,
-    );
+    const response = await this.apiRequest<ShufersalProductSearchResponse>({
+      method: 'GET',
+      path: `/search/results?q=${searchQuery}&limit=${String(limit)}&page=${String(page)}`,
+    });
     if (!response) {
       throw new Error('Failed to get search results');
     }
@@ -340,10 +343,10 @@ export class ShufersalSession {
   }
 
   async getOrders(): Promise<AccountOrders> {
-    const accountOrders = await this.apiRequest<ShufersalAccountOrders>(
-      'GET',
-      '/my-account/orders',
-    );
+    const accountOrders = await this.apiRequest<ShufersalAccountOrders>({
+      method: 'GET',
+      path: '/my-account/orders',
+    });
     if (!accountOrders) {
       throw new Error('Failed to get orders');
     }
@@ -366,10 +369,10 @@ export class ShufersalSession {
   }
 
   async getOrderDetails(code: string): Promise<OrderDetails | undefined> {
-    const orderDetails = await this.apiRequest<ShufersalOrderDetails>(
-      'GET',
-      `/my-account/orders/${code}`,
-    );
+    const orderDetails = await this.apiRequest<ShufersalOrderDetails>({
+      method: 'GET',
+      path: `/my-account/orders/${code}`,
+    });
     if (!orderDetails) {
       return undefined;
     }
@@ -392,7 +395,12 @@ export class ShufersalSession {
     const shufersalCartEntries = items.map((item) =>
       cartItemToShufersalCartItemAdd(item),
     );
-    await this.apiRequest('POST', '/cart/addGrid', shufersalCartEntries);
+    await this.apiRequest({
+      method: 'POST',
+      path: '/cart/addGrid',
+      body: shufersalCartEntries,
+      requiresCSRF: true,
+    });
   }
 
   async removeFromCart(productCode: string): Promise<void> {
@@ -412,20 +420,27 @@ export class ShufersalSession {
       'cartContext[action]': 'remove',
     });
 
-    await this.apiRequest('POST', `/cart/update?${query.toString()}`, {
-      quantity: 0,
+    await this.apiRequest({
+      method: 'POST',
+      path: `/cart/update?${query.toString()}`,
+      body: { quantity: 0 },
+      requiresCSRF: true,
     });
   }
 
   async clearCart(): Promise<void> {
-    await this.apiRequest('POST', '/cart/remove');
+    await this.apiRequest({
+      method: 'POST',
+      path: '/cart/remove',
+      requiresCSRF: true,
+    });
   }
 
   async getCartItems(): Promise<ExistingCartItem[]> {
-    const cartItems = await this.apiRequest<ShufersalCartItem[]>(
-      'GET',
-      '/recommendations/entry-recommendations',
-    );
+    const cartItems = await this.apiRequest<ShufersalCartItem[]>({
+      method: 'GET',
+      path: '/recommendations/entry-recommendations',
+    });
     if (!cartItems) {
       return [];
     }
@@ -434,8 +449,10 @@ export class ShufersalSession {
 
   async getAvailableTimeSlots(): Promise<DeliveryTimeSlot[]> {
     const response = await this.apiRequest<ShufersalAvailableTimeSlotsResponse>(
-      'GET',
-      '/timeSlot/preselection/getHomeDeliverySlots',
+      {
+        method: 'GET',
+        path: '/timeSlot/preselection/getHomeDeliverySlots',
+      },
     );
     if (!response) {
       return [];
@@ -446,7 +463,10 @@ export class ShufersalSession {
   async getSelectedTimeSlot(): Promise<DeliveryTimeSlot | null> {
     const shufersalTimeSlot = await this.apiRequest<
       ShufersalTimeSlot | undefined
-    >('GET', '/timeSlot/preselection/getSelectedTimeslot');
+    >({
+      method: 'GET',
+      path: '/timeSlot/preselection/getSelectedTimeslot',
+    });
     if (!shufersalTimeSlot || !shufersalTimeSlot.code) {
       return null;
     }
@@ -461,13 +481,13 @@ export class ShufersalSession {
     if (!timeSlot) {
       throw new Error(`Time slot ${timeSlotCode} not found`);
     }
-    await this.apiRequest(
-      'POST',
-      '/timeSlot/preselection/postHomeDeliverySlot',
-      {
+    await this.apiRequest({
+      method: 'POST',
+      path: '/timeSlot/preselection/postHomeDeliverySlot',
+      body: {
         homeDeliveryTimeSlot: timeSlot.rawData,
       },
-    );
+    });
   }
 
   async createOrder(removeMissingItems: boolean): Promise<void> {
@@ -538,7 +558,11 @@ export class ShufersalSession {
   }
 
   async putOrderInUpdateMode(code: string): Promise<void> {
-    await this.apiRequest('GET', `/cart/cartFromOrder/${code}`);
+    await this.apiRequest({
+      method: 'GET',
+      path: `/cart/cartFromOrder/${code}`,
+      requiresCSRF: true,
+    });
   }
 
   private async getOrderInUpdateMode(): Promise<string | null> {
@@ -578,11 +602,11 @@ export class ShufersalSession {
       );
     }
 
-    await this.apiRequest(
-      'POST',
-      `/emailInvoice/sendEmalInvoice?orderNum=${orderNumber}&email=${encodeURIComponent(email)}`,
-      { uuid: email },
-    );
+    await this.apiRequest({
+      method: 'POST',
+      path: `/emailInvoice/sendEmalInvoice?orderNum=${orderNumber}&email=${encodeURIComponent(email)}`,
+      body: { uuid: email },
+    });
   }
 
   async takeScreenshot(): Promise<Buffer> {
@@ -612,23 +636,36 @@ export class ShufersalSession {
     }
   }
 
+  private async getCSRFToken(): Promise<string> {
+    await this.page.waitForFunction(() => window.ACC?.config?.CSRFToken, {
+      timeout: 10000,
+    });
+    const token = await this.page.evaluate(() => window.ACC?.config?.CSRFToken);
+    if (!token) {
+      throw new Error('CSRFToken not found');
+    }
+    return token;
+  }
+
   private async apiRequest<T extends object | undefined>(
-    method: 'GET' | 'POST',
-    path: string,
-    body?: unknown,
+    config: ApiRequestConfig,
   ) {
+    const { method, path, body, requiresCSRF = false } = config;
+    const csrfToken = requiresCSRF ? await this.getCSRFToken() : undefined;
+
     const makeRequest = async (): Promise<T | undefined> => {
       const data = await this.page.evaluate(
-        async (url, method, body) => {
-          const csrftoken = window.ACC?.config?.CSRFToken;
-          if (!csrftoken) {
-            throw new Error('CSRFToken not found');
+        async (url, method, body, csrfToken) => {
+          const headers: Record<string, string> = {
+            'content-type': 'application/json',
+          };
+
+          if (csrfToken) {
+            headers['csrftoken'] = csrfToken;
           }
+
           const response = await fetch(url, {
-            headers: {
-              'content-type': 'application/json',
-              csrftoken,
-            },
+            headers,
             method,
             body: body ? JSON.stringify(body) : undefined,
             mode: 'cors',
@@ -662,6 +699,7 @@ export class ShufersalSession {
         `${WEBAPP_URL}${path}`,
         method,
         body,
+        csrfToken,
       );
       return data as T | undefined;
     };
@@ -763,10 +801,6 @@ export class ShufersalBot {
     await page.goto(WEBAPP_URL, {
       waitUntil: 'domcontentloaded',
       timeout: NAVIGATION_TIMEOUT,
-    });
-
-    await page.waitForFunction(() => window.ACC?.config?.CSRFToken, {
-      timeout: 10000,
     });
   }
 }
