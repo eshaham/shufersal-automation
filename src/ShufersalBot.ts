@@ -709,9 +709,10 @@ export class ShufersalBot {
   }
 
   async terminate(): Promise<void> {
-    assert(this.browser);
-    await this.browser.close();
-    this.browser = undefined;
+    if (this.browser) {
+      await this.browser.close();
+      this.browser = undefined;
+    }
   }
 
   private async initIfNeeded() {
