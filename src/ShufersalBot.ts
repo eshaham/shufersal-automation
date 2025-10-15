@@ -515,7 +515,7 @@ export class ShufersalSession {
     });
     await this.page.click('#checkoutPwd button[type="submit"]');
 
-    await this.page.waitForNavigation({ waitUntil: 'networkidle0' });
+    await this.page.waitForNavigation({ waitUntil: 'domcontentloaded' });
 
     const missingProductsModal = await this.page
       .waitForSelector('#missingProducts', {
@@ -534,7 +534,7 @@ export class ShufersalSession {
 
     await this.page.click('.btnConfirm');
 
-    await this.page.waitForNavigation({ waitUntil: 'networkidle0' });
+    await this.page.waitForNavigation({ waitUntil: 'domcontentloaded' });
   }
 
   async putOrderInUpdateMode(code: string): Promise<void> {
