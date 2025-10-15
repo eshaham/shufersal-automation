@@ -28,6 +28,20 @@ import {
 } from '~/types';
 import puppeteer, { Browser, BrowserContext, Page } from 'puppeteer-core';
 
+export class InvalidCredentialsError extends Error {
+  constructor(message = 'Invalid credentials') {
+    super(message);
+    this.name = 'InvalidCredentialsError';
+  }
+}
+
+export class LoginTimeoutError extends Error {
+  constructor(message = 'Login timeout') {
+    super(message);
+    this.name = 'LoginTimeoutError';
+  }
+}
+
 interface ShufersalBotOptions {
   executablePath?: string;
   browserWSEndpoint?: string;
@@ -267,10 +281,31 @@ export class ShufersalSession {
     await this.page.type('#j_password', this.credentials.password);
     await this.page.click('.btn-login');
 
-    await this.page.waitForNavigation({
-      waitUntil: 'domcontentloaded',
-      timeout: NAVIGATION_TIMEOUT,
-    });
+    const errorModalOrNavigation = await Promise.race([
+      this.page
+        .waitForSelector('.modal.message-modal.error.in', {
+          visible: true,
+          timeout: NAVIGATION_TIMEOUT,
+        })
+        .then(() => 'error' as const)
+        .catch(() => null),
+      this.page
+        .waitForFunction(
+          (loginUrl) => !window.location.href.includes(loginUrl),
+          { timeout: NAVIGATION_TIMEOUT },
+          '/login',
+        )
+        .then(() => 'navigation' as const)
+        .catch(() => null),
+    ]);
+
+    if (errorModalOrNavigation === 'error') {
+      throw new InvalidCredentialsError();
+    }
+
+    if (errorModalOrNavigation === null) {
+      throw new LoginTimeoutError();
+    }
 
     await this.page.waitForFunction(() => window.ACC?.config?.CSRFToken, {
       timeout: 10000,
