@@ -507,12 +507,14 @@ export class ShufersalSession {
       }
     }
 
+    console.info('createOrder: Navigating to cart summary');
     await this.page.goto(`${WEBAPP_URL}/cart/cartsummary`);
 
     await this.page.waitForSelector('.miglog-cart-summary-checkoutLink', {
       timeout: 60_000,
       visible: true,
     });
+    console.info('createOrder: Starting checkout flow');
     await this.page.click('.miglog-cart-summary-checkoutLink');
 
     const giftModal = await this.page
@@ -533,9 +535,16 @@ export class ShufersalSession {
     await this.page.type('#j_password', this.credentials.password, {
       delay: 100,
     });
-    await this.page.click('#checkoutPwd button[type="submit"]');
 
-    await this.page.waitForNavigation({ waitUntil: 'domcontentloaded' });
+    console.info('createOrder: Submitting password');
+    await Promise.all([
+      this.page.waitForNavigation({
+        waitUntil: 'domcontentloaded',
+        timeout: NAVIGATION_TIMEOUT,
+      }),
+      this.page.click('#checkoutPwd button[type="submit"]'),
+    ]);
+    console.info('createOrder: Password navigation completed');
 
     const missingProductsModal = await this.page
       .waitForSelector('#missingProducts', {
@@ -545,6 +554,7 @@ export class ShufersalSession {
       .catch(() => null);
 
     if (missingProductsModal) {
+      console.info('createOrder: Dismissing missing products modal');
       await this.page.click('#missingProducts .bottomContainer button');
       await this.page.waitForSelector('#missingProducts', {
         hidden: true,
@@ -552,9 +562,15 @@ export class ShufersalSession {
       });
     }
 
-    await this.page.click('.btnConfirm');
-
-    await this.page.waitForNavigation({ waitUntil: 'domcontentloaded' });
+    console.info('createOrder: Confirming order');
+    await Promise.all([
+      this.page.waitForNavigation({
+        waitUntil: 'domcontentloaded',
+        timeout: NAVIGATION_TIMEOUT,
+      }),
+      this.page.click('.btnConfirm'),
+    ]);
+    console.info('createOrder: Order confirmed successfully');
   }
 
   async putOrderInUpdateMode(code: string): Promise<void> {
