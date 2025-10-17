@@ -28,6 +28,9 @@ import {
 } from '~/types';
 import puppeteer, { Browser, BrowserContext, Page } from 'puppeteer-core';
 
+import { createSessionProxy } from './SessionProxy';
+import { ShufersalSessionError } from './ShufersalSessionError';
+
 export class InvalidCredentialsError extends Error {
   constructor(message = 'Invalid credentials') {
     super(message);
@@ -47,6 +50,7 @@ interface ShufersalBotOptions {
   browserWSEndpoint?: string;
   headless?: boolean;
   chromiumArgs?: string[];
+  takeScreenshotOnErrors?: boolean;
 }
 
 interface ShufersalCredentials {
@@ -758,10 +762,34 @@ export class ShufersalBot {
   ): Promise<ShufersalSession> {
     const session = await this.initSession(username, password);
 
-    if (sessionData) {
-      await this.restoreSession(session, sessionData);
-    } else {
-      await session.performLogin();
+    try {
+      if (sessionData) {
+        await this.restoreSession(session, sessionData);
+      } else {
+        await session.performLogin();
+      }
+    } catch (error) {
+      if (this.options.takeScreenshotOnErrors && error instanceof Error) {
+        let screenshot: Buffer | null = null;
+        try {
+          screenshot = await session.takeScreenshot();
+        } catch (screenshotError) {
+          console.warn(
+            'Failed to capture screenshot on error:',
+            screenshotError,
+          );
+        }
+        throw new ShufersalSessionError(
+          error.message,
+          error,
+          screenshot || undefined,
+        );
+      }
+      throw error;
+    }
+
+    if (this.options.takeScreenshotOnErrors) {
+      return createSessionProxy(session);
     }
 
     return session;
