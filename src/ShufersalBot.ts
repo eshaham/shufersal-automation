@@ -277,15 +277,15 @@ export class ShufersalSession {
 
     await this.page.waitForSelector('#j_username', {
       visible: true,
-      timeout: ACTION_TIMEOUT,
+      timeout: NAVIGATION_TIMEOUT,
     });
     await this.page.waitForSelector('#j_password', {
       visible: true,
-      timeout: ACTION_TIMEOUT,
+      timeout: NAVIGATION_TIMEOUT,
     });
     await this.page.waitForSelector('.btn-login', {
       visible: true,
-      timeout: ACTION_TIMEOUT,
+      timeout: NAVIGATION_TIMEOUT,
     });
 
     await this.page.type('#j_username', this.credentials.username);
