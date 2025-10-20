@@ -106,12 +106,52 @@ const restoredSession = await bot.createSession(
 );
 ```
 
+### Using External Browser Instance
+
+You can provide your own Puppeteer browser instance, useful for sharing a browser across multiple sessions or integrating with services like Browserless:
+
+```typescript
+import puppeteer from 'puppeteer';
+import { ShufersalBot } from 'shufersal-automation';
+
+// Create or connect to a browser
+const browser = await puppeteer.launch({
+  executablePath: '/path/to/chrome',
+  headless: true,
+});
+// Or connect to Browserless:
+// const browser = await puppeteer.connect({
+//   browserWSEndpoint: 'wss://chrome.browserless.io?token=YOUR_TOKEN'
+// });
+
+// Pass the browser to ShufersalBot
+const bot = new ShufersalBot({
+  browser,
+  takeScreenshotOnErrors: true,
+});
+
+const session = await bot.createSession('username', 'password');
+// Use the session...
+await session.close();
+
+// Don't call bot.terminate() - it won't close the external browser
+// Close the browser manually when done:
+await browser.close();
+```
+
+When using an external browser:
+
+- `bot.terminate()` will NOT close the browser (you manage its lifecycle)
+- The browser can be shared across multiple `ShufersalBot` instances
+- Useful for optimizing browser resource usage with services like Browserless
+
 ## API Reference
 
 ### ShufersalBot
 
 Constructor options:
 
+- `browser`: Externally provided Puppeteer browser instance (optional)
 - `executablePath`: Path to Chrome/Chromium executable
 - `browserWSEndpoint`: WebSocket endpoint for remote Chrome instance
 - `headless`: Run browser in headless mode (default: true)

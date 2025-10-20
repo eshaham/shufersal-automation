@@ -46,6 +46,7 @@ export class LoginTimeoutError extends Error {
 }
 
 interface ShufersalBotOptions {
+  browser?: Browser;
   executablePath?: string;
   browserWSEndpoint?: string;
   headless?: boolean;
@@ -806,7 +807,7 @@ export class ShufersalBot {
   }
 
   async terminate(): Promise<void> {
-    if (this.browser) {
+    if (this.browser && !this.options.browser) {
       await this.browser.close();
       this.browser = undefined;
     }
@@ -814,7 +815,10 @@ export class ShufersalBot {
 
   private async initIfNeeded() {
     if (!this.browser) {
-      if (this.options.browserWSEndpoint) {
+      if (this.options.browser) {
+        console.log('Using externally provided browser instance');
+        this.browser = this.options.browser;
+      } else if (this.options.browserWSEndpoint) {
         console.log(
           'Connecting to remote Chrome at:',
           this.options.browserWSEndpoint,
