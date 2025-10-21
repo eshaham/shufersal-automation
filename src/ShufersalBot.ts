@@ -252,7 +252,6 @@ interface ApiRequestConfig {
   method: 'GET' | 'POST';
   path: string;
   body?: unknown;
-  requiresCSRF?: boolean;
 }
 
 export class ShufersalSession {
@@ -404,7 +403,6 @@ export class ShufersalSession {
       method: 'POST',
       path: '/cart/addGrid',
       body: shufersalCartEntries,
-      requiresCSRF: true,
     });
   }
 
@@ -429,7 +427,6 @@ export class ShufersalSession {
       method: 'POST',
       path: `/cart/update?${query.toString()}`,
       body: { quantity: 0 },
-      requiresCSRF: true,
     });
   }
 
@@ -437,7 +434,6 @@ export class ShufersalSession {
     await this.apiRequest({
       method: 'POST',
       path: '/cart/remove',
-      requiresCSRF: true,
     });
   }
 
@@ -597,7 +593,6 @@ export class ShufersalSession {
     await this.apiRequest({
       method: 'GET',
       path: `/cart/cartFromOrder/${code}`,
-      requiresCSRF: true,
     });
   }
 
@@ -686,8 +681,8 @@ export class ShufersalSession {
   private async apiRequest<T extends object | undefined>(
     config: ApiRequestConfig,
   ) {
-    const { method, path, body, requiresCSRF = false } = config;
-    const csrfToken = requiresCSRF ? await this.getCSRFToken() : undefined;
+    const { method, path, body } = config;
+    const csrfToken = method === 'POST' ? await this.getCSRFToken() : undefined;
 
     const makeRequest = async (): Promise<T | undefined> => {
       const data = await this.page.evaluate(
