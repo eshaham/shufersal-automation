@@ -491,7 +491,12 @@ export class ShufersalSession {
     });
   }
 
-  async createOrder(removeMissingItems: boolean): Promise<void> {
+  async createOrder(removeMissingItems: boolean): Promise<OrderInfo> {
+    const selectedTimeSlot = await this.getSelectedTimeSlot();
+    if (!selectedTimeSlot) {
+      throw new Error('No time slot selected before creating order');
+    }
+
     const cartItems = await this.getCartItems();
     const missingItems = cartItems.filter((item) => !item.inStock);
     if (missingItems.length > 0) {
@@ -587,6 +592,17 @@ export class ShufersalSession {
       this.page.click('.btnConfirm'),
     ]);
     console.info('createOrder: Order confirmed successfully');
+
+    const accountOrders = await this.getOrders();
+    const matchingOrder = accountOrders.activeOrders.find(
+      (order) => order.deliveryDateTime === selectedTimeSlot.dateTime,
+    );
+    if (!matchingOrder) {
+      throw new Error(
+        `No active order found with delivery time ${selectedTimeSlot.dateTime} after creating order`,
+      );
+    }
+    return matchingOrder;
   }
 
   async putOrderInUpdateMode(code: string): Promise<void> {
