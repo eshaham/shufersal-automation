@@ -1,3 +1,15 @@
+<div align="center">
+
+<a href="https://salchik.co.il">
+<img src="docs/salchik-screenshot.png" width="300" alt="Salchik - Automated delivery booking"/>
+</a>
+
+_Looking for a ready-to-use solution? Try [Salchik.co.il](https://salchik.co.il)_
+
+---
+
+</div>
+
 # shufersal-automation
 
 A TypeScript library for automating Shufersal online shopping using Puppeteer.
@@ -71,11 +83,11 @@ await bot.terminate();
 
 1. Create a [.env](.env) file in the project root:
 
-```env
-SHUFERSAL_USERNAME=your_username
-SHUFERSAL_PASSWORD=your_password
-CHROME_PATH=/path/to/chrome
-```
+   ```env
+   SHUFERSAL_USERNAME=your_username
+   SHUFERSAL_PASSWORD=your_password
+   CHROME_PATH=/path/to/chrome
+   ```
 
 2. Run the example script:
 
@@ -196,7 +208,7 @@ npm install
 
 ### Project Structure
 
-```
+```text
 src/
 ├── index.ts                    # Public API exports
 ├── ShufersalBot.ts            # Main bot and session classes
@@ -225,8 +237,8 @@ Elad Shaham (elad.shaham.net)
 
 ## Repository
 
-https://github.com/eshaham/shufersal-automation
+<https://github.com/eshaham/shufersal-automation>
 
 ## Contributing
 
-Issues and pull requests are welcome at https://github.com/eshaham/shufersal-automation/issues
+Issues and pull requests are welcome at <https://github.com/eshaham/shufersal-automation/issues>
