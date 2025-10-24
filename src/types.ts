@@ -491,3 +491,35 @@ export interface SearchResults {
 export interface SerializedSessionData {
   cookies: unknown[];
 }
+
+export interface ReceiptPromotion {
+  code: string;
+  description: string;
+  discountAmount: number;
+}
+
+export interface ReceiptItem {
+  productCode: string;
+  productName: string;
+  barcode?: string;
+  orderedQuantity: number;
+  suppliedQuantity: number;
+  sellingMethod: SellingMethod;
+  price: number;
+  totalPrice: number;
+  promotions?: ReceiptPromotion[];
+}
+
+export interface ReceiptDetails {
+  orderCode: string;
+  orderDate: string;
+  deliveryDate: string;
+  customerName: string;
+  customerPhone: string;
+  address: string;
+  items: ReceiptItem[];
+  subtotal: number;
+  vatAmount: number;
+  deliveryFee: number;
+  totalAmount: number;
+}

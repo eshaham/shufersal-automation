@@ -10,6 +10,7 @@ import {
   OrderInfo,
   OrderStatus,
   Product,
+  ReceiptDetails,
   SearchResults,
   SellingMethod,
   SerializedSessionData,
@@ -32,6 +33,7 @@ import timezone from 'dayjs/plugin/timezone';
 import utc from 'dayjs/plugin/utc';
 import puppeteer, { Browser, BrowserContext, Page } from 'puppeteer-core';
 
+import { parseReceipt } from './receiptParser';
 import { createSessionProxy } from './SessionProxy';
 import { ShufersalSessionError } from './ShufersalSessionError';
 
@@ -677,6 +679,10 @@ export class ShufersalSession {
       path: `/emailInvoice/sendEmalInvoice?orderNum=${orderNumber}&email=${encodeURIComponent(email)}`,
       body: { uuid: email },
     });
+  }
+
+  parseReceipt(receiptText: string): ReceiptDetails {
+    return parseReceipt(receiptText);
   }
 
   async takeScreenshot(): Promise<Buffer> {
