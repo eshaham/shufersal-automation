@@ -4,5 +4,6 @@
     "npm run lint:fix",
     "npm run format"
   ],
-  "*.{json,md,yml,yaml}": ["npm run format"]
+  "*.{json,yml,yaml}": ["npm run format"],
+  "*.md": ["markdownlint", "npm run format"]
 }
