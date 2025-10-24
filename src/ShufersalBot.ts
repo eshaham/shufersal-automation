@@ -681,10 +681,6 @@ export class ShufersalSession {
     });
   }
 
-  parseReceipt(receiptText: string): ReceiptDetails {
-    return parseReceipt(receiptText);
-  }
-
   async takeScreenshot(): Promise<Buffer> {
     return this.page.screenshot() as Promise<Buffer>;
   }
@@ -851,6 +847,10 @@ export class ShufersalBot {
       await this.browser.close();
       this.browser = undefined;
     }
+  }
+
+  static parseReceipt(receiptText: string): ReceiptDetails {
+    return parseReceipt(receiptText);
   }
 
   private async initIfNeeded() {
