@@ -138,7 +138,12 @@ export interface ShufersalPaymentInfo {
 }
 
 export interface ShufersalOrderStatus {
-  code: 'RECEIVED' | 'PICKING' | 'DELIVERED' | 'CANCELLED_SENT_TO_ERP';
+  code:
+    | 'RECEIVED'
+    | 'PICKING'
+    | 'ON_THE_WAY'
+    | 'DELIVERED'
+    | 'CANCELLED_SENT_TO_ERP';
   type: 'OrderStatus';
 }
 
@@ -408,6 +413,7 @@ export enum SellingMethod {
 
 export enum OrderStatus {
   Active = 'ACTIVE',
+  Shipped = 'SHIPPED',
   Delivered = 'DELIVERED',
   Canceled = 'CANCELED',
 }

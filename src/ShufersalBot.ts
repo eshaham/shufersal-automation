@@ -141,6 +141,8 @@ function shufersalAccountOrderToOrderInfo(
     status = OrderStatus.Canceled;
   } else if (order.status.code === 'DELIVERED') {
     status = OrderStatus.Delivered;
+  } else if (order.status.code === 'ON_THE_WAY') {
+    status = OrderStatus.Shipped;
   } else {
     status = OrderStatus.Active;
   }
