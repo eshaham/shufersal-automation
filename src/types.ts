@@ -165,6 +165,8 @@ export interface ShufersalOrder {
   createdString: string;
   deliveredDate: number;
   deliveredDateString: string | null;
+  updateToDateString: string | null;
+  updateToHourString: string | null;
   isUpdatable: boolean;
   isActive: boolean;
   isCancelable: boolean;
@@ -447,6 +449,7 @@ export interface ItemDetails extends Item {
 export interface OrderInfo {
   code: string;
   deliveryDateTime: string;
+  updateableUntilDateTime: string | null;
   totalPrice: number;
   status: OrderStatus;
   isUpdatable: boolean;

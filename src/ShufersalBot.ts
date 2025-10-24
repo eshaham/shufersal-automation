@@ -26,10 +26,14 @@ import {
   ShufersalSellingMethod,
   ShufersalTimeSlot,
 } from '~/types';
+import dayjs from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
 import puppeteer, { Browser, BrowserContext, Page } from 'puppeteer-core';
 
 import { createSessionProxy } from './SessionProxy';
 import { ShufersalSessionError } from './ShufersalSessionError';
+
+dayjs.extend(customParseFormat);
 
 export class InvalidCredentialsError extends Error {
   constructor(message = 'Invalid credentials') {
@@ -137,9 +141,21 @@ function shufersalAccountOrderToOrderInfo(
     status = OrderStatus.Active;
   }
 
+  let updateableUntilDateTime: string | null = null;
+  if (order.updateToDateString && order.updateToHourString) {
+    const parsed = dayjs(
+      `${order.updateToDateString} ${order.updateToHourString}`,
+      'DD/MM/YY HH:mm',
+    );
+    if (parsed.isValid()) {
+      updateableUntilDateTime = parsed.toISOString();
+    }
+  }
+
   return {
     code: order.code,
     deliveryDateTime: dateTime.toISOString(),
+    updateableUntilDateTime,
     totalPrice: order.totalPrice.value,
     status,
     isActive: order.isActive,
