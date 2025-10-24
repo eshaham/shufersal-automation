@@ -28,12 +28,16 @@ import {
 } from '~/types';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
+import timezone from 'dayjs/plugin/timezone';
+import utc from 'dayjs/plugin/utc';
 import puppeteer, { Browser, BrowserContext, Page } from 'puppeteer-core';
 
 import { createSessionProxy } from './SessionProxy';
 import { ShufersalSessionError } from './ShufersalSessionError';
 
 dayjs.extend(customParseFormat);
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 export class InvalidCredentialsError extends Error {
   constructor(message = 'Invalid credentials') {
@@ -143,9 +147,10 @@ function shufersalAccountOrderToOrderInfo(
 
   let updateableUntilDateTime: string | null = null;
   if (order.updateToDateString && order.updateToHourString) {
-    const parsed = dayjs(
+    const parsed = dayjs.tz(
       `${order.updateToDateString} ${order.updateToHourString}`,
       'DD/MM/YY HH:mm',
+      'Asia/Jerusalem',
     );
     if (parsed.isValid()) {
       updateableUntilDateTime = parsed.toISOString();
