@@ -327,7 +327,7 @@ function parseReceiptItems(lines: string[]): ReceiptItem[] {
           : itemData.description;
 
         currentItem = {
-          productCode: itemData.code,
+          productCode: `P_${itemData.code}`,
           productName,
           barcode: itemData.barcode,
           orderedQuantity: itemData.orderedQty,
