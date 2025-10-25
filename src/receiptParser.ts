@@ -171,17 +171,33 @@ function extractAddress(lines: string[]): string {
 }
 
 function parseItemLine(line: string): ParsedItemLine | null {
+  const weightItemWithBarcodeRegex =
+    /^([\d.]+|-{4})\s+([\d.]+|-{4})\s+קג\s+([\d.]+)\s+([\d.]+)\s+ימ\s+(\d{13})\s+(.+)$/;
+  const weightItemWithCodeRegex =
+    /^([\d.]+|-{4})\s+([\d.]+|-{4})\s+קג\s+([\d.]+)\s+([\d.]+)\s+ימ\s+(.+?)\s+(\d+)$/;
   const itemWithCodeRegex =
     /^([\d.]+|-{4})\s+([\d.]+|-{4})\s+(\d+)\s+(\d+)\s+(יח|קג|ימ)\s+(.+?)\s+(\d+)$/;
   const itemWithBarcodeRegex =
     /^([\d.]+|-{4})\s+([\d.]+|-{4})\s+(\d+)\s+(\d+)\s+(יח|קג|ימ)\s+(\d{13})\s+(.+)$/;
 
-  let match = line.match(itemWithCodeRegex);
+  let match = line.match(weightItemWithBarcodeRegex);
   let hasBarcode = false;
+  let isWeight = false;
 
-  if (!match) {
-    match = line.match(itemWithBarcodeRegex);
+  if (match) {
     hasBarcode = true;
+    isWeight = true;
+  } else {
+    match = line.match(weightItemWithCodeRegex);
+    if (match) {
+      isWeight = true;
+    } else {
+      match = line.match(itemWithCodeRegex);
+      if (!match) {
+        match = line.match(itemWithBarcodeRegex);
+        hasBarcode = true;
+      }
+    }
   }
 
   if (!match) {
@@ -190,32 +206,48 @@ function parseItemLine(line: string): ParsedItemLine | null {
 
   const totalPriceStr = match[1];
   const unitPriceStr = match[2];
-  const suppliedQtyStr = match[3];
-  const orderedQtyStr = match[4];
-  const unit = match[5];
-
-  const totalPrice = totalPriceStr === '----' ? 0 : parseFloat(totalPriceStr);
-  const unitPrice = unitPriceStr === '----' ? 0 : parseFloat(unitPriceStr);
-  const suppliedQty = parseInt(suppliedQtyStr, 10);
-  const orderedQty = parseInt(orderedQtyStr, 10);
-
+  let suppliedQtyStr: string;
+  let orderedQtyStr: string;
+  let unit: string;
   let code: string;
   let description: string;
   let barcode: string | undefined;
 
-  if (hasBarcode) {
-    barcode = match[6];
-    description = match[7];
-    code = barcode;
+  if (isWeight) {
+    suppliedQtyStr = match[3];
+    orderedQtyStr = match[4];
+    unit = 'קג';
+    if (hasBarcode) {
+      barcode = match[5];
+      description = match[6];
+      code = barcode;
+    } else {
+      description = match[5];
+      code = match[6];
+    }
   } else {
-    description = match[6];
-    code = match[7];
+    suppliedQtyStr = match[3];
+    orderedQtyStr = match[4];
+    unit = match[5];
+    if (hasBarcode) {
+      barcode = match[6];
+      description = match[7];
+      code = barcode;
+    } else {
+      description = match[6];
+      code = match[7];
 
-    const barcodeMatch = description.match(/^(\d{13})\s+(.+)/);
-    if (barcodeMatch) {
-      barcode = barcodeMatch[1];
+      const barcodeMatch = description.match(/^(\d{13})\s+(.+)/);
+      if (barcodeMatch) {
+        barcode = barcodeMatch[1];
+      }
     }
   }
+
+  const totalPrice = totalPriceStr === '----' ? 0 : parseFloat(totalPriceStr);
+  const unitPrice = unitPriceStr === '----' ? 0 : parseFloat(unitPriceStr);
+  const suppliedQty = parseFloat(suppliedQtyStr);
+  const orderedQty = parseFloat(orderedQtyStr);
 
   return {
     totalPrice,
