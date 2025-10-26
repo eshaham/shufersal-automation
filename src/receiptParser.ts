@@ -23,42 +23,62 @@ function convertToSellingMethod(sellingMethod: string): SellingMethod {
   return SellingMethod.Weight;
 }
 
-function findValueAfterLabel(
-  lines: string[],
-  label: string,
-  validator: (value: string) => boolean,
-  maxOffset = 5,
-): string | null {
-  const labelIndex = lines.findIndex((line) => line.includes(label));
-  if (labelIndex === -1) {
-    return null;
+function extractOrderNumber(lines: string[]): string {
+  const startIndex = lines.findIndex((line) => line.includes('תעודת משלוח'));
+  if (startIndex === -1) {
+    throw new Error('Could not find delivery document section');
   }
 
-  const labelLine = lines[labelIndex];
-  const inlineMatch = labelLine.split(label)[1]?.trim();
-  if (inlineMatch && validator(inlineMatch)) {
-    return inlineMatch;
-  }
+  const labels: string[] = [];
+  let labelsEndIndex = -1;
 
-  for (let i = 1; i <= maxOffset; i++) {
-    if (labelIndex + i >= lines.length) break;
-    const nextLine = lines[labelIndex + i].trim();
-    if (nextLine && validator(nextLine)) {
-      return nextLine;
+  for (let i = startIndex + 1; i < lines.length && i < startIndex + 20; i++) {
+    const line = lines[i].trim();
+    if (line.endsWith(':')) {
+      labels.push(line);
+      if (line === 'מס. הזמנה:') {
+        labelsEndIndex = i;
+        break;
+      }
     }
   }
 
-  return null;
-}
+  if (labelsEndIndex === -1 || labels.length === 0) {
+    throw new Error('Could not find order number label');
+  }
 
-function extractOrderNumber(lines: string[]): string {
-  const value = findValueAfterLabel(lines, 'מס. הזמנה:', (v) =>
-    /^\d+$/.test(v),
-  );
-  if (!value) {
+  const orderLabelIndex = labels.indexOf('מס. הזמנה:');
+  if (orderLabelIndex === -1) {
+    throw new Error('Order number label not found in labels list');
+  }
+
+  const values: string[] = [];
+  for (
+    let i = labelsEndIndex + 1;
+    i < lines.length && i < labelsEndIndex + 20;
+    i++
+  ) {
+    const line = lines[i].trim();
+    if (line.includes('ת. הזמנה:') || line.includes('ת. אספקה:')) {
+      break;
+    }
+    if (line) {
+      values.push(line);
+    }
+  }
+
+  if (values.length !== labels.length) {
+    throw new Error(
+      `Label/value mismatch: ${String(labels.length)} labels, ${String(values.length)} values`,
+    );
+  }
+
+  const orderNumber = values[orderLabelIndex];
+  if (!orderNumber || !/^\d+$/.test(orderNumber)) {
     throw new Error('Could not parse order number');
   }
-  return value;
+
+  return orderNumber.padStart(8, '0');
 }
 
 function extractDates(lines: string[]): {
@@ -192,10 +212,11 @@ function parseItemLine(line: string): ParsedItemLine | null {
     if (match) {
       isWeight = true;
     } else {
-      match = line.match(itemWithCodeRegex);
-      if (!match) {
-        match = line.match(itemWithBarcodeRegex);
+      match = line.match(itemWithBarcodeRegex);
+      if (match) {
         hasBarcode = true;
+      } else {
+        match = line.match(itemWithCodeRegex);
       }
     }
   }
@@ -329,7 +350,7 @@ function parseReceiptItems(lines: string[]): ReceiptItem[] {
         currentItem = {
           productCode: `P_${itemData.code}`,
           productName,
-          barcode: itemData.barcode,
+          ...(itemData.barcode ? { barcode: itemData.barcode } : {}),
           orderedQuantity: itemData.orderedQty,
           suppliedQuantity: itemData.suppliedQty,
           sellingMethod: convertToSellingMethod(itemData.sellingMethod),

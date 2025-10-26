@@ -1,0 +1,514 @@
+{
+  "orderCode": "02118447",
+  "orderDate": "7:13 5/10/25",
+  "deliveryDate": "13:00 10/10/25",
+  "customerName": "ישראל ישראלי",
+  "customerPhone": "0501234567",
+  "address": "הסכין 7 נתניה 42000, קומה 1, דירה 1",
+  "items": [
+    {
+      "productCode": "P_66264",
+      "productName": "חטיף דובונים 40 גרם",
+      "orderedQuantity": 4,
+      "suppliedQuantity": 4,
+      "sellingMethod": "UNIT",
+      "price": 4.9,
+      "totalPrice": 19.6,
+      "promotions": [
+        {
+          "code": "4252065",
+          "description": "9ב30 ציפס/דובונים/במבה/פופקו/אפרו 1.00",
+          "discountAmount": 6.27
+        }
+      ]
+    },
+    {
+      "productCode": "P_67544",
+      "productName": "פירורית זהב 200 גרם",
+      "orderedQuantity": 1,
+      "suppliedQuantity": 1,
+      "sellingMethod": "UNIT",
+      "price": 7.9,
+      "totalPrice": 7.9,
+      "promotions": []
+    },
+    {
+      "productCode": "P_1817728",
+      "productName": "חטיף צ'יטוס בטעם קטשופ55",
+      "orderedQuantity": 1,
+      "suppliedQuantity": 1,
+      "sellingMethod": "UNIT",
+      "price": 4.5,
+      "totalPrice": 4.5,
+      "promotions": [
+        {
+          "code": "4249571",
+          "description": "6ב20 תפוציפס/דוריטוס/ציטוס -50-70 1.00",
+          "discountAmount": 1.17
+        }
+      ]
+    },
+    {
+      "productCode": "P_8745239",
+      "productName": "תפוצ'יפס קראנצ' טעם טבעי",
+      "orderedQuantity": 2,
+      "suppliedQuantity": 2,
+      "sellingMethod": "UNIT",
+      "price": 4.5,
+      "totalPrice": 9,
+      "promotions": [
+        {
+          "code": "4249571",
+          "description": "6ב20 תפוציפס/דוריטוס/ציטוס -50-70 1.00",
+          "discountAmount": 2.33
+        }
+      ]
+    },
+    {
+      "productCode": "P_8752244",
+      "productName": "תפוצ'יפס קראנצ' גריל 50ג",
+      "orderedQuantity": 2,
+      "suppliedQuantity": 2,
+      "sellingMethod": "UNIT",
+      "price": 4.5,
+      "totalPrice": 9,
+      "promotions": [
+        {
+          "code": "4249571",
+          "description": "6ב20 תפוציפס/דוריטוס/ציטוס -50-70 1.00",
+          "discountAmount": 2.33
+        }
+      ]
+    },
+    {
+      "productCode": "P_7290100687109",
+      "productName": "במבה נוגט 60 גרם",
+      "barcode": "7290100687109",
+      "orderedQuantity": 2,
+      "suppliedQuantity": 2,
+      "sellingMethod": "UNIT",
+      "price": 4.9,
+      "totalPrice": 9.8,
+      "promotions": [
+        {
+          "code": "4252065",
+          "description": "9ב30 ציפס/דובונים/במבה/פופקו/אפרו 1.00",
+          "discountAmount": 3.13
+        }
+      ]
+    },
+    {
+      "productCode": "P_7290106520813",
+      "productName": "תפוצ'יפס בטעם טבעי 6*50ג",
+      "barcode": "7290106520813",
+      "orderedQuantity": 2,
+      "suppliedQuantity": 2,
+      "sellingMethod": "UNIT",
+      "price": 18.5,
+      "totalPrice": 37,
+      "promotions": [
+        {
+          "code": "4249357",
+          "description": "8.80 תפוציפס בטעם טבעי -50*6מות-0 1.00",
+          "discountAmount": 19.4
+        }
+      ]
+    },
+    {
+      "productCode": "P_7290106524439",
+      "productName": "תפוצ'יפס פופס טבעי 60גרם",
+      "barcode": "7290106524439",
+      "orderedQuantity": 1,
+      "suppliedQuantity": 1,
+      "sellingMethod": "UNIT",
+      "price": 4.5,
+      "totalPrice": 4.5,
+      "promotions": [
+        {
+          "code": "4249571",
+          "description": "6ב20 תפוציפס/דוריטוס/ציטוס -50-70 1.00",
+          "discountAmount": 1.17
+        }
+      ]
+    },
+    {
+      "productCode": "P_7290118420651",
+      "productName": "חטיף ביסלי בטעם ריבס60d",
+      "barcode": "7290118420651",
+      "orderedQuantity": 3,
+      "suppliedQuantity": 3,
+      "sellingMethod": "UNIT",
+      "price": 4.9,
+      "totalPrice": 14.7,
+      "promotions": [
+        {
+          "code": "4252065",
+          "description": "9ב30 ציפס/דובונים/במבה/פופקו/אפרו 1.00",
+          "discountAmount": 4.7
+        }
+      ]
+    },
+    {
+      "productCode": "P_7296073079866",
+      "productName": "עגבניות מרוסקות 800 גרם",
+      "barcode": "7296073079866",
+      "orderedQuantity": 1,
+      "suppliedQuantity": 1,
+      "sellingMethod": "UNIT",
+      "price": 9.9,
+      "totalPrice": 9.9,
+      "promotions": [
+        {
+          "code": "4243416",
+          "description": "קופ.אישי 6.90 עגבניות מרוסקות/מקו 1.00",
+          "discountAmount": 3
+        }
+      ]
+    },
+    {
+      "productCode": "P_7296073629146",
+      "productName": "מיונז אמיתי 500 גרם MAYO",
+      "barcode": "7296073629146",
+      "orderedQuantity": 2,
+      "suppliedQuantity": 2,
+      "sellingMethod": "UNIT",
+      "price": 9.9,
+      "totalPrice": 19.8,
+      "promotions": []
+    },
+    {
+      "productCode": "P_7296073705543",
+      "productName": "קורנפלקס מונרו 750 גרם",
+      "barcode": "7296073705543",
+      "orderedQuantity": 2,
+      "suppliedQuantity": 2,
+      "sellingMethod": "UNIT",
+      "price": 17.9,
+      "totalPrice": 35.8,
+      "promotions": [
+        {
+          "code": "4260999",
+          "description": "14.90 קורנפלקס מונרו 750 גרם-ישיר 1.00",
+          "discountAmount": 6
+        }
+      ]
+    },
+    {
+      "productCode": "P_8000500071083",
+      "productName": "שוקולד קינדר 200 גרם",
+      "barcode": "8000500071083",
+      "orderedQuantity": 1,
+      "suppliedQuantity": 1,
+      "sellingMethod": "UNIT",
+      "price": 17.9,
+      "totalPrice": 17.9,
+      "promotions": []
+    },
+    {
+      "productCode": "P_8445291301948",
+      "productName": "מולטי צ'ריוס 500 גרם",
+      "barcode": "8445291301948",
+      "orderedQuantity": 1,
+      "suppliedQuantity": 1,
+      "sellingMethod": "UNIT",
+      "price": 23.9,
+      "totalPrice": 23.9,
+      "promotions": []
+    },
+    {
+      "productCode": "P_408354",
+      "productName": "דנונה בר פצפוצים 173 גרם",
+      "orderedQuantity": 8,
+      "suppliedQuantity": 8,
+      "sellingMethod": "UNIT",
+      "price": 5.3,
+      "totalPrice": 42.4,
+      "promotions": []
+    },
+    {
+      "productCode": "P_1201589",
+      "productName": "ביצים ארוזות L 12 יחידות",
+      "orderedQuantity": 1,
+      "suppliedQuantity": 1,
+      "sellingMethod": "UNIT",
+      "price": 14.09,
+      "totalPrice": 14.09,
+      "promotions": []
+    },
+    {
+      "productCode": "P_4125721",
+      "productName": "שמנת בישול15%-שף לבן250מ",
+      "orderedQuantity": 2,
+      "suppliedQuantity": 2,
+      "sellingMethod": "UNIT",
+      "price": 9.9,
+      "totalPrice": 19.8,
+      "promotions": []
+    },
+    {
+      "productCode": "P_4127336",
+      "productName": "קוטג' תנובה 9% שומן 250ג",
+      "orderedQuantity": 4,
+      "suppliedQuantity": 0,
+      "sellingMethod": "UNIT",
+      "price": 0,
+      "totalPrice": 0,
+      "promotions": []
+    },
+    {
+      "productCode": "P_4131074",
+      "productName": "חלב בקרטון 3% שומן 1 ל'",
+      "orderedQuantity": 4,
+      "suppliedQuantity": 4,
+      "sellingMethod": "UNIT",
+      "price": 7.28,
+      "totalPrice": 29.12,
+      "promotions": []
+    },
+    {
+      "productCode": "P_5839078",
+      "productName": "דנונה ביו 3% 8*150 גרם",
+      "orderedQuantity": 1,
+      "suppliedQuantity": 1,
+      "sellingMethod": "UNIT",
+      "price": 19.9,
+      "totalPrice": 19.9,
+      "promotions": []
+    },
+    {
+      "productCode": "P_72940761",
+      "productName": "מילקי בטעם שוקולד 170מ\"ל",
+      "orderedQuantity": 4,
+      "suppliedQuantity": 3,
+      "sellingMethod": "UNIT",
+      "price": 3.1,
+      "totalPrice": 9.3,
+      "promotions": []
+    },
+    {
+      "productCode": "P_7290112336712",
+      "productName": "דנונה פרו 21 חלבון0% 200",
+      "barcode": "7290112336712",
+      "orderedQuantity": 1,
+      "suppliedQuantity": 1,
+      "sellingMethod": "UNIT",
+      "price": 6.5,
+      "totalPrice": 6.5,
+      "promotions": []
+    },
+    {
+      "productCode": "P_7290110565527",
+      "productName": "דנונה פרו 20ג חלבון 200ג",
+      "barcode": "7290110565527",
+      "orderedQuantity": 1,
+      "suppliedQuantity": 1,
+      "sellingMethod": "UNIT",
+      "price": 6.5,
+      "totalPrice": 6.5,
+      "promotions": []
+    },
+    {
+      "productCode": "P_7290014758162",
+      "productName": "חלב עיזים מלא 3.6% 1ליטר",
+      "barcode": "7290014758162",
+      "orderedQuantity": 1,
+      "suppliedQuantity": 0,
+      "sellingMethod": "UNIT",
+      "price": 0,
+      "totalPrice": 0,
+      "promotions": []
+    },
+    {
+      "productCode": "P_7622201139278",
+      "productName": "גבינת פילדלפיה 25% 150גר",
+      "barcode": "7622201139278",
+      "orderedQuantity": 1,
+      "suppliedQuantity": 1,
+      "sellingMethod": "UNIT",
+      "price": 15.9,
+      "totalPrice": 15.9,
+      "promotions": []
+    },
+    {
+      "productCode": "P_7296073453444",
+      "productName": "עמק 28% פרוס כ 400ג א",
+      "barcode": "7296073453444",
+      "orderedQuantity": 1,
+      "suppliedQuantity": 0.39,
+      "sellingMethod": "WEIGHT",
+      "price": 52.31,
+      "totalPrice": 20.4,
+      "promotions": []
+    },
+    {
+      "productCode": "P_5416491",
+      "productName": "יוגורט מחלב עיזים 750 מל",
+      "orderedQuantity": 1,
+      "suppliedQuantity": 1,
+      "sellingMethod": "UNIT",
+      "price": 20.9,
+      "totalPrice": 20.9,
+      "promotions": []
+    },
+    {
+      "productCode": "P_7296073143437",
+      "productName": "ברנפלקס ללת\"ס 500ג",
+      "barcode": "7296073143437",
+      "orderedQuantity": 3,
+      "suppliedQuantity": 3,
+      "sellingMethod": "UNIT",
+      "price": 21.9,
+      "totalPrice": 65.7,
+      "promotions": [
+        {
+          "code": "4252235",
+          "description": "14.90 ברנפלקס ללת\"ס 500ג-ישיר",
+          "discountAmount": 21
+        }
+      ]
+    },
+    {
+      "productCode": "P_8802512",
+      "productName": "יין אדום יבש וינו 750מ\"ל",
+      "orderedQuantity": 4,
+      "suppliedQuantity": 4,
+      "sellingMethod": "UNIT",
+      "price": 23.9,
+      "totalPrice": 95.6,
+      "promotions": [
+        {
+          "code": "4252171",
+          "description": "2ב44.40 פקדון יין וינו יבש אדום/ל 1.00",
+          "discountAmount": 5.6
+        }
+      ]
+    },
+    {
+      "productCode": "P_7290019205708",
+      "productName": "ש.עוף מיני דינוזאור600גר",
+      "barcode": "7290019205708",
+      "orderedQuantity": 1,
+      "suppliedQuantity": 1,
+      "sellingMethod": "UNIT",
+      "price": 37.9,
+      "totalPrice": 37.9,
+      "promotions": []
+    },
+    {
+      "productCode": "P_7290019205807",
+      "productName": "שניצלונים 600 גרם",
+      "barcode": "7290019205807",
+      "orderedQuantity": 1,
+      "suppliedQuantity": 1,
+      "sellingMethod": "UNIT",
+      "price": 19.9,
+      "totalPrice": 19.9,
+      "promotions": []
+    },
+    {
+      "productCode": "P_530703",
+      "productName": "פסטרמה חרמון+תה 400+400ג",
+      "orderedQuantity": 1,
+      "suppliedQuantity": 1,
+      "sellingMethod": "UNIT",
+      "price": 33.9,
+      "totalPrice": 33.9,
+      "promotions": [
+        {
+          "code": "4250521",
+          "description": "24.90 פסטרמה חרמון+תה 400+400ג-יש 1.00",
+          "discountAmount": 9
+        }
+      ]
+    },
+    {
+      "productCode": "P_8340618",
+      "productName": "סלמון מעושן מצונן 100 גר",
+      "orderedQuantity": 1,
+      "suppliedQuantity": 1,
+      "sellingMethod": "UNIT",
+      "price": 22.9,
+      "totalPrice": 22.9,
+      "promotions": []
+    },
+    {
+      "productCode": "P_965253",
+      "productName": "אשכול בננה )אונליין(",
+      "orderedQuantity": 2,
+      "suppliedQuantity": 2.09,
+      "sellingMethod": "WEIGHT",
+      "price": 12.9,
+      "totalPrice": 26.96,
+      "promotions": []
+    },
+    {
+      "productCode": "P_7296073592341",
+      "productName": "מארז תפוחים גאלה",
+      "barcode": "7296073592341",
+      "orderedQuantity": 1,
+      "suppliedQuantity": 1.11,
+      "sellingMethod": "WEIGHT",
+      "price": 14.9,
+      "totalPrice": 16.54,
+      "promotions": []
+    },
+    {
+      "productCode": "P_7296073706748",
+      "productName": "מארז תפוח פינקריספי",
+      "barcode": "7296073706748",
+      "orderedQuantity": 2,
+      "suppliedQuantity": 1.95,
+      "sellingMethod": "WEIGHT",
+      "price": 22.9,
+      "totalPrice": 44.66,
+      "promotions": []
+    },
+    {
+      "productCode": "P_2766056",
+      "productName": "עגבניה שרי תמר",
+      "orderedQuantity": 2,
+      "suppliedQuantity": 2,
+      "sellingMethod": "UNIT",
+      "price": 10.9,
+      "totalPrice": 21.8,
+      "promotions": []
+    },
+    {
+      "productCode": "P_7290018443545",
+      "productName": "פלפל צ'ילי 200גרם",
+      "barcode": "7290018443545",
+      "orderedQuantity": 1,
+      "suppliedQuantity": 1,
+      "sellingMethod": "UNIT",
+      "price": 7.9,
+      "totalPrice": 7.9,
+      "promotions": []
+    },
+    {
+      "productCode": "P_7296073440369",
+      "productName": "מלפפון ארוז 10 יחידות",
+      "barcode": "7296073440369",
+      "orderedQuantity": 1,
+      "suppliedQuantity": 1.37,
+      "sellingMethod": "WEIGHT",
+      "price": 7.9,
+      "totalPrice": 10.82,
+      "promotions": []
+    },
+    {
+      "productCode": "P_7296073440413",
+      "productName": "פלפל אדום ארוז",
+      "barcode": "7296073440413",
+      "orderedQuantity": 1,
+      "suppliedQuantity": 0.45,
+      "sellingMethod": "WEIGHT",
+      "price": 11.91,
+      "totalPrice": 5.36,
+      "promotions": []
+    }
+  ],
+  "subtotal": 752.95,
+  "vatAmount": 119.42,
+  "deliveryFee": 29.9,
+  "totalAmount": 782.85
+}

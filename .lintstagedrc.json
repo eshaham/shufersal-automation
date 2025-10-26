@@ -1,9 +1,10 @@
 {
-  "*.{js,ts}": [
+  "src/**/*.{js,ts}": [
     "bash -c 'npm run typecheck'",
     "npm run lint:fix",
     "npm run format"
   ],
+  "jest.config.js": ["npm run format"],
   "*.{json,yml,yaml}": ["npm run format"],
   "*.md": ["markdownlint", "npm run format"]
 }
