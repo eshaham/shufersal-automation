@@ -645,7 +645,7 @@ export class ShufersalSession {
     });
   }
 
-  private async getOrderInUpdateMode(): Promise<string | null> {
+  async getOrderInUpdateMode(): Promise<string | null> {
     const textContent = await this.page.evaluate(async (url) => {
       const response = await fetch(url, {
         method: 'GET',
