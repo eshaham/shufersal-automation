@@ -618,6 +618,14 @@ export class ShufersalSession {
     ]);
     console.info('createOrder: Order confirmed successfully');
 
+    console.info('createOrder: Waiting for confirmation page to load');
+    await this.page.waitForSelector('.orderFunctions .view', {
+      visible: true,
+      timeout: 10_000,
+    });
+    console.info('createOrder: Confirmation page loaded');
+
+    console.info('createOrder: Fetching orders to find newly created order');
     const accountOrders = await this.getOrders();
     const matchingOrder = accountOrders.activeOrders.find(
       (order) => order.deliveryDateTime === selectedTimeSlot.dateTime,
