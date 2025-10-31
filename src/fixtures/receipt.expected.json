@@ -368,6 +368,17 @@
       ]
     },
     {
+      "productCode": "P_7290103706302",
+      "productName": "XPO שקיות אוכל 2*150י",
+      "barcode": "7290103706302",
+      "orderedQuantity": 1,
+      "suppliedQuantity": 1,
+      "sellingMethod": "UNIT",
+      "price": 12.9,
+      "totalPrice": 12.9,
+      "promotions": []
+    },
+    {
       "productCode": "P_8802512",
       "productName": "יין אדום יבש וינו 750מ\"ל",
       "orderedQuantity": 4,
@@ -507,8 +518,8 @@
       "promotions": []
     }
   ],
-  "subtotal": 752.95,
-  "vatAmount": 119.42,
+  "subtotal": 765.85,
+  "vatAmount": 121.26,
   "deliveryFee": 29.9,
-  "totalAmount": 782.85
+  "totalAmount": 795.75
 }

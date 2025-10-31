@@ -198,7 +198,7 @@ function parseItemLine(line: string): ParsedItemLine | null {
   const itemWithCodeRegex =
     /^([\d.]+|-{4})\s+([\d.]+|-{4})\s+(\d+)\s+(\d+)\s+(יח|קג|ימ)\s+(.+?)\s+(\d+)$/;
   const itemWithBarcodeRegex =
-    /^([\d.]+|-{4})\s+([\d.]+|-{4})\s+(\d+)\s+(\d+)\s+(יח|קג|ימ)\s+(\d{13})\s+(.+)$/;
+    /^([\d.]+|-{4})\s+([\d.]+|-{4})\s+(\d+)\s+(\d+)\s+(יח|קג|ימ)\s+([A-Z]+\s+)?(\d{13})\s+(.+)$/;
 
   let match = line.match(weightItemWithBarcodeRegex);
   let hasBarcode = false;
@@ -251,8 +251,9 @@ function parseItemLine(line: string): ParsedItemLine | null {
     orderedQtyStr = match[4];
     unit = match[5];
     if (hasBarcode) {
-      barcode = match[6];
-      description = match[7];
+      const prefix = match[6] || '';
+      barcode = match[7];
+      description = prefix + match[8];
       code = barcode;
     } else {
       description = match[6];
