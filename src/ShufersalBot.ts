@@ -220,6 +220,7 @@ function shufersalCartItemToItem(
   cartItem: ShufersalCartItem,
 ): ExistingCartItem {
   return {
+    entryNumber: cartItem.entryNumber,
     productCode: cartItem.productCode,
     productName: cartItem.productName,
     quantity: cartItem.cartyQty,
@@ -431,7 +432,10 @@ export class ShufersalSession {
     });
   }
 
-  async removeFromCart(productCode: string): Promise<void> {
+  async updateCartItemQuantity(
+    productCode: string,
+    quantity: number,
+  ): Promise<void> {
     const cartItems = await this.getCartItems();
     const cartItem = cartItems.find((item) => item.productCode === productCode);
 
@@ -439,20 +443,26 @@ export class ShufersalSession {
       throw new Error(`Product ${productCode} not found in cart`);
     }
 
-    const shufersalCartItem = cartItem.rawData as ShufersalCartItem;
     const query = new URLSearchParams({
-      entryNumber: shufersalCartItem.entryNumber.toString(),
-      qty: '0',
+      entryNumber: cartItem.entryNumber.toString(),
+      qty: quantity.toString(),
       'cartContext[openFrom]': 'CART',
       'cartContext[recommendationType]': 'REGULAR',
-      'cartContext[action]': 'remove',
     });
+
+    if (quantity === 0) {
+      query.set('cartContext[action]', 'remove');
+    }
 
     await this.apiRequest({
       method: 'POST',
       path: `/cart/update?${query.toString()}`,
-      body: { quantity: 0 },
+      body: { quantity },
     });
+  }
+
+  async removeFromCart(productCode: string): Promise<void> {
+    await this.updateCartItemQuantity(productCode, 0);
   }
 
   async clearCart(): Promise<void> {
