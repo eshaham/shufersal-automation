@@ -22,6 +22,7 @@ export default tseslint.config(
     },
     rules: {
       '@typescript-eslint/explicit-module-boundary-types': 'error',
+      'curly': 'error',
     },
   },
 );
