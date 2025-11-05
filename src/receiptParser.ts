@@ -147,7 +147,9 @@ function extractCustomerInfo(lines: string[]): {
 
   for (let i = startSearch; i < lines.length && i < startSearch + 10; i++) {
     const line = lines[i].trim();
-    if (!line) continue;
+    if (!line) {
+      continue;
+    }
 
     if (!customerName && line.length > 0 && !/^\d+$/.test(line)) {
       customerName = line;

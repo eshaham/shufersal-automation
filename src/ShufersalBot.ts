@@ -16,6 +16,7 @@ import {
   SerializedSessionData,
   ShufersalAccountOrders,
   ShufersalAvailableTimeSlotsResponse,
+  ShufersalBase,
   ShufersalCartItem,
   ShufersalCartItemAdd,
   ShufersalOrder,
@@ -85,6 +86,21 @@ export const WEBAPP_URL = `${BASE_URL}/online/he`;
 const NAVIGATION_TIMEOUT = 30_000;
 const ACTION_TIMEOUT = 10_000;
 
+function stripCategoryCodePrefix(
+  category: ShufersalBase | null,
+): ShufersalBase | null {
+  if (!category) {
+    return null;
+  }
+
+  const name = category.name.replace(/^\d+-/, '');
+
+  return {
+    code: category.code,
+    name,
+  };
+}
+
 function shufersalProductSearchResultToProduct(
   result: ShufersalProductSearchResult,
 ): Product {
@@ -93,8 +109,10 @@ function shufersalProductSearchResultToProduct(
       ? SellingMethod.Unit
       : SellingMethod.Weight;
 
-  const mainCategory = result.commercialCategoryGroup;
-  const subCategory = result.commercialCategorySubGroup;
+  const mainCategory = stripCategoryCodePrefix(result.commercialCategoryGroup);
+  const subCategory = stripCategoryCodePrefix(
+    result.commercialCategorySubGroup,
+  );
 
   return {
     code: result.code,
@@ -181,8 +199,8 @@ function shufersalProductToProduct(product: ShufersalProduct): Product {
     name: product.name,
     description: product.description,
     brand: product.brand,
-    mainCategory: product.commercialCategoryGroup,
-    subCategory: product.commercialCategorySubGroup,
+    mainCategory: stripCategoryCodePrefix(product.commercialCategoryGroup),
+    subCategory: stripCategoryCodePrefix(product.commercialCategorySubGroup),
     sellingMethod:
       product.sellingMethod.code === ShufersalSellingMethod.Unit
         ? SellingMethod.Unit
