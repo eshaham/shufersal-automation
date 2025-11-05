@@ -11,7 +11,7 @@ export default tseslint.config(
   eslint.configs.recommended,
   ...tseslint.configs.strictTypeChecked,
   {
-    ignores: ['dist'],
+    ignores: ['dist', '*.mjs'],
   },
   {
     languageOptions: {
