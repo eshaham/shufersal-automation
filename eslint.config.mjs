@@ -22,7 +22,19 @@ export default tseslint.config(
     },
     rules: {
       '@typescript-eslint/explicit-module-boundary-types': 'error',
-      curly: 'error',
+      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/no-extraneous-class': 'off',
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
+      '@typescript-eslint/prefer-optional-chain': 'error',
+      'no-unused-vars': 'off',
+      curly: ['error', 'all'],
     },
   },
 );

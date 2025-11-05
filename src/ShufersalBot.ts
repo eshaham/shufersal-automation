@@ -536,7 +536,7 @@ export class ShufersalSession {
       method: 'GET',
       path: '/timeSlot/preselection/getSelectedTimeslot',
     });
-    if (!shufersalTimeSlot || !shufersalTimeSlot.code) {
+    if (!shufersalTimeSlot?.code) {
       return null;
     }
     return shufersalTimeSlotToDeliveryTimeSlot(shufersalTimeSlot);
@@ -801,7 +801,7 @@ export class ShufersalSession {
             (response.status >= 300 && response.status < 400)
           ) {
             const location = response.headers.get('location');
-            if (location && location.includes('/login')) {
+            if (location?.includes('/login')) {
               throw new Error('REDIRECT_TO_LOGIN');
             }
           }
