@@ -426,6 +426,7 @@ export interface Product {
   mainCategory: NamedEntity | null;
   subCategory: NamedEntity | null;
   sellingMethod: SellingMethod;
+  imageUrl?: string;
   inStock: boolean;
   price: number;
   formattedPrice: string;

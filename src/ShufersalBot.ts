@@ -23,6 +23,7 @@ import {
   ShufersalOrderDetails,
   ShufersalOrderEntry,
   ShufersalProduct,
+  ShufersalProductImage,
   ShufersalProductSearchResponse,
   ShufersalProductSearchResult,
   ShufersalSellingMethod,
@@ -101,6 +102,18 @@ function stripCategoryCodePrefix(
   };
 }
 
+function extractImageUrl(images?: ShufersalProductImage[]): string | undefined {
+  if (!images || images.length === 0) {
+    return undefined;
+  }
+
+  const largeImage = images.find(
+    (img) => img.format === 'large' && img.galleryIndex === 0,
+  );
+
+  return largeImage?.url;
+}
+
 function shufersalProductSearchResultToProduct(
   result: ShufersalProductSearchResult,
 ): Product {
@@ -122,6 +135,7 @@ function shufersalProductSearchResultToProduct(
     mainCategory,
     subCategory,
     sellingMethod,
+    imageUrl: extractImageUrl(result.images),
     inStock: result.stock.stockLevelStatus.code === 'inStock',
     price: result.price.value,
     formattedPrice: result.price.formattedValue,
@@ -205,6 +219,7 @@ function shufersalProductToProduct(product: ShufersalProduct): Product {
       product.sellingMethod.code === ShufersalSellingMethod.Unit
         ? SellingMethod.Unit
         : SellingMethod.Weight,
+    imageUrl: extractImageUrl(product.images),
     inStock: product.stock.stockLevelStatus.code === 'inStock',
     price: product.price.value,
     formattedPrice: product.price.formattedValue,
