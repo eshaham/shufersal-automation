@@ -952,9 +952,13 @@ export class ShufersalBot {
       await context.setCookie(cookie);
     }
 
-    await page.goto(WEBAPP_URL, {
+    await page.goto(`${WEBAPP_URL}/wish-lists/main`, {
       waitUntil: 'domcontentloaded',
-      timeout: NAVIGATION_TIMEOUT,
+      timeout: 30000,
+    });
+
+    await page.waitForSelector('.log-out', {
+      timeout: 10000,
     });
   }
 }
