@@ -251,13 +251,14 @@ function shufersalOrderEntryToItem(entry: ShufersalOrderEntry): ItemDetails {
 
 function shufersalCartItemToItem(
   cartItem: ShufersalCartItem,
+  outOfStockProductCodes: string[],
 ): ExistingCartItem {
   return {
     entryNumber: cartItem.entryNumber,
     productCode: cartItem.productCode,
     productName: cartItem.productName,
     quantity: cartItem.cartyQty,
-    inStock: cartItem.recommendation !== 'SWITCH',
+    inStock: !outOfStockProductCodes.includes(cartItem.productCode),
     rawData: cartItem,
   };
 }
@@ -513,7 +514,10 @@ export class ShufersalSession {
     if (!cartItems) {
       return [];
     }
-    return cartItems.map(shufersalCartItemToItem);
+    const outOfStockProductCodes = await this.getOutOfStockProductCodes();
+    return cartItems.map((item) =>
+      shufersalCartItemToItem(item, outOfStockProductCodes),
+    );
   }
 
   async getAvailableTimeSlots(): Promise<DeliveryTimeSlot[]> {
@@ -757,6 +761,33 @@ export class ShufersalSession {
         throw error;
       }
     }
+  }
+
+  private async getOutOfStockProductCodes(): Promise<string[]> {
+    const productCodes = await this.page.evaluate(async (url) => {
+      const response = await fetch(url, {
+        method: 'GET',
+        mode: 'cors',
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        throw new Error(
+          `Request failed with status ${String(response.status)}`,
+        );
+      }
+      const html = await response.text();
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      const disabledElements = doc.querySelectorAll(
+        '[data-product-code][aria-disabled="true"]',
+      );
+      const codes = Array.from(disabledElements)
+        .map((el) => el.getAttribute('data-product-code'))
+        .filter((code): code is string => code !== null);
+      return Array.from(new Set(codes));
+    }, `${WEBAPP_URL}/cart/load?restoreCart=true`);
+
+    return productCodes;
   }
 
   private async getCSRFToken(): Promise<string> {
