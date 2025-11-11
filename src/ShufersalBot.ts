@@ -623,7 +623,7 @@ export class ShufersalSession {
     const missingProductsModal = await this.page
       .waitForSelector('#missingProducts', {
         visible: true,
-        timeout: 5_000,
+        timeout: ACTION_TIMEOUT,
       })
       .catch(() => null);
 
@@ -632,7 +632,7 @@ export class ShufersalSession {
       await this.page.click('#missingProducts .bottomContainer button');
       await this.page.waitForSelector('#missingProducts', {
         hidden: true,
-        timeout: 5_000,
+        timeout: ACTION_TIMEOUT,
       });
     }
 
