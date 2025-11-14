@@ -985,11 +985,11 @@ export class ShufersalBot {
 
     await page.goto(`${WEBAPP_URL}/wish-lists/main`, {
       waitUntil: 'domcontentloaded',
-      timeout: 30000,
+      timeout: NAVIGATION_TIMEOUT,
     });
 
-    await page.waitForSelector('.log-out', {
-      timeout: 10000,
+    await page.waitForSelector('.title-notAnonymous', {
+      timeout: NAVIGATION_TIMEOUT,
     });
   }
 }
