@@ -86,6 +86,7 @@ export const WEBAPP_URL = `${BASE_URL}/online/he`;
 
 const NAVIGATION_TIMEOUT = 30_000;
 const ACTION_TIMEOUT = 10_000;
+const LOGIN_VERIFICATION_TIMEOUT = 60_000;
 
 function stripCategoryCodePrefix(
   category: ShufersalBase | null,
@@ -989,7 +990,7 @@ export class ShufersalBot {
     });
 
     await page.waitForSelector('.title-notAnonymous', {
-      timeout: NAVIGATION_TIMEOUT,
+      timeout: LOGIN_VERIFICATION_TIMEOUT,
     });
   }
 }
