@@ -330,6 +330,17 @@
       "promotions": []
     },
     {
+      "productCode": "P_7296073453703",
+      "productName": "מגורדת 23% תנובה 7296073453703 פרמזן",
+      "barcode": "7296073453703",
+      "orderedQuantity": 1,
+      "suppliedQuantity": 0.24,
+      "sellingMethod": "WEIGHT",
+      "price": 149,
+      "totalPrice": 35.76,
+      "promotions": []
+    },
+    {
       "productCode": "P_7296073453444",
       "productName": "עמק 28% פרוס כ 400ג א",
       "barcode": "7296073453444",
@@ -518,8 +529,8 @@
       "promotions": []
     }
   ],
-  "subtotal": 765.85,
-  "vatAmount": 121.26,
+  "subtotal": 801.61,
+  "vatAmount": 126.84,
   "deliveryFee": 29.9,
-  "totalAmount": 795.75
+  "totalAmount": 831.51
 }

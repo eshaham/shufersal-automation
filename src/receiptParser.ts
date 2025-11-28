@@ -195,6 +195,8 @@ function extractAddress(lines: string[]): string {
 function parseItemLine(line: string): ParsedItemLine | null {
   const weightItemWithBarcodeRegex =
     /^([\d.]+|-{4})\s+([\d.]+|-{4})\s+קג\s+([\d.]+)\s+([\d.]+)\s+ימ\s+(\d{13})\s+(.+)$/;
+  const weightItemWithBarcodeInMiddleRegex =
+    /^([\d.]+|-{4})\s+([\d.]+|-{4})\s+קג\s+([\d.]+)\s+([\d.]+)\s+ימ\s+(.+?)\s+(\d{13})\s+(.+)$/;
   const weightItemWithCodeRegex =
     /^([\d.]+|-{4})\s+([\d.]+|-{4})\s+קג\s+([\d.]+)\s+([\d.]+)\s+ימ\s+(.+?)\s+(\d+)$/;
   const itemWithCodeRegex =
@@ -205,20 +207,28 @@ function parseItemLine(line: string): ParsedItemLine | null {
   let match = line.match(weightItemWithBarcodeRegex);
   let hasBarcode = false;
   let isWeight = false;
+  let barcodeInMiddle = false;
 
   if (match) {
     hasBarcode = true;
     isWeight = true;
   } else {
-    match = line.match(weightItemWithCodeRegex);
+    match = line.match(weightItemWithBarcodeInMiddleRegex);
     if (match) {
+      hasBarcode = true;
       isWeight = true;
+      barcodeInMiddle = true;
     } else {
-      match = line.match(itemWithBarcodeRegex);
+      match = line.match(weightItemWithCodeRegex);
       if (match) {
-        hasBarcode = true;
+        isWeight = true;
       } else {
-        match = line.match(itemWithCodeRegex);
+        match = line.match(itemWithBarcodeRegex);
+        if (match) {
+          hasBarcode = true;
+        } else {
+          match = line.match(itemWithCodeRegex);
+        }
       }
     }
   }
@@ -240,7 +250,11 @@ function parseItemLine(line: string): ParsedItemLine | null {
     suppliedQtyStr = match[3];
     orderedQtyStr = match[4];
     unit = 'קג';
-    if (hasBarcode) {
+    if (barcodeInMiddle) {
+      barcode = match[6];
+      description = `${match[5]} ${match[6]} ${match[7]}`;
+      code = barcode;
+    } else if (hasBarcode) {
       barcode = match[5];
       description = match[6];
       code = barcode;
