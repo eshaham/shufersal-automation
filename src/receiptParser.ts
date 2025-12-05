@@ -414,31 +414,31 @@ function parseSummary(lines: string[]): {
 
   let subtotal = 0;
   if (subTotalLine) {
-    const match = subTotalLine.match(/^([\d.]+)\s*:/);
+    const match = subTotalLine.match(/^([\d,.]+)\s*:/);
     if (match) {
-      subtotal = parseFloat(match[1]);
+      subtotal = parseFloat(match[1].replace(/,/g, ''));
     }
   }
 
   let deliveryFee = 0;
   if (deliveryLine) {
-    const match = deliveryLine.match(/^([\d.]+)\s*:/);
+    const match = deliveryLine.match(/^([\d,.]+)\s*:/);
     if (match) {
-      deliveryFee = parseFloat(match[1]);
+      deliveryFee = parseFloat(match[1].replace(/,/g, ''));
     }
   }
 
-  const totalMatch = totalLine.match(/^([\d.]+)\s/);
+  const totalMatch = totalLine.match(/^([\d,.]+)\s/);
   if (!totalMatch) {
     throw new Error('Could not parse total');
   }
-  const totalAmount = parseFloat(totalMatch[1]);
+  const totalAmount = parseFloat(totalMatch[1].replace(/,/g, ''));
 
   let vatAmount = 0;
   if (vatLine) {
-    const vatMatch = vatLine.match(/^([\d.]+)\s*:/);
+    const vatMatch = vatLine.match(/^([\d,.]+)\s*:/);
     if (vatMatch) {
-      vatAmount = parseFloat(vatMatch[1]);
+      vatAmount = parseFloat(vatMatch[1].replace(/,/g, ''));
     }
   }
 
