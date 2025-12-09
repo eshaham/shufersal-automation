@@ -845,7 +845,13 @@ export class ShufersalSession {
               if (contentType?.includes('application/json')) {
                 errorBody = JSON.stringify(await response.json());
               } else {
-                errorBody = await response.text();
+                const text = await response.text();
+                if (contentType?.includes('text/html') && text.length > 500) {
+                  errorBody =
+                    text.substring(0, 500) + '... (HTML response truncated)';
+                } else {
+                  errorBody = text;
+                }
               }
             } catch {
               errorBody = 'Failed to read error response body';
