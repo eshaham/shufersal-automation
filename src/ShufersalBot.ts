@@ -138,6 +138,7 @@ function shufersalProductSearchResultToProduct(
     sellingMethod,
     imageUrl: extractImageUrl(result.images),
     inStock: result.stock.stockLevelStatus.code === 'inStock',
+    purchasable: result.purchasable ?? true,
     price: result.price.value,
     formattedPrice: result.price.formattedValue,
     rawData: result,
@@ -222,6 +223,7 @@ function shufersalProductToProduct(product: ShufersalProduct): Product {
         : SellingMethod.Weight,
     imageUrl: extractImageUrl(product.images),
     inStock: product.stock.stockLevelStatus.code === 'inStock',
+    purchasable: product.showOnSite || product.showOnMobile,
     price: product.price.value,
     formattedPrice: product.price.formattedValue,
     rawData: product,
@@ -397,14 +399,16 @@ export class ShufersalSession {
   }
 
   async getProductByCode(productCode: string): Promise<Product | null> {
-    const codeToSearch = productCode.startsWith('P_')
-      ? productCode.substring(2)
-      : productCode;
+    const productDetails = await this.apiRequest<ShufersalProduct>({
+      method: 'GET',
+      path: `/products/${productCode}`,
+    });
 
-    const searchResults = await this.searchProducts(codeToSearch);
-    const product = searchResults.results.find((p) => p.code === productCode);
+    if (!productDetails) {
+      return null;
+    }
 
-    return product || null;
+    return shufersalProductToProduct(productDetails);
   }
 
   async getOrders(): Promise<AccountOrders> {

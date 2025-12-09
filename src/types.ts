@@ -428,6 +428,7 @@ export interface Product {
   sellingMethod: SellingMethod;
   imageUrl?: string;
   inStock: boolean;
+  purchasable: boolean;
   price: number;
   formattedPrice: string;
   rawData: unknown;
