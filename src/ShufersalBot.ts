@@ -839,8 +839,20 @@ export class ShufersalSession {
           }
 
           if (!response.ok) {
+            let errorBody = '';
+            try {
+              const contentType = response.headers.get('content-type');
+              if (contentType?.includes('application/json')) {
+                errorBody = JSON.stringify(await response.json());
+              } else {
+                errorBody = await response.text();
+              }
+            } catch {
+              errorBody = 'Failed to read error response body';
+            }
+
             throw new Error(
-              `Request failed with status ${String(response.status)}`,
+              `Request failed: ${method} ${url} -> ${String(response.status)} ${response.statusText}. Response: ${errorBody}`,
             );
           }
 
