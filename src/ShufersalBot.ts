@@ -609,6 +609,7 @@ export class ShufersalSession {
 
     if (giftModal) {
       await this.page.click('#giftProductsModal .btnClose');
+      await this.page.click('.miglog-cart-summary-checkoutLink');
     }
 
     await this.page.waitForSelector('#j_password', {
