@@ -10,7 +10,9 @@ import {
   OrderInfo,
   OrderStatus,
   Product,
+  PromotionInfo,
   ReceiptDetails,
+  ScrapedPromotionDetails,
   SearchResults,
   SellingMethod,
   SerializedSessionData,
@@ -35,6 +37,7 @@ import timezone from 'dayjs/plugin/timezone';
 import utc from 'dayjs/plugin/utc';
 import puppeteer, { Browser, BrowserContext, Page } from 'puppeteer-core';
 
+import { extractPromotionInfo } from './promotions';
 import { parseReceipt } from './receiptParser';
 import { createSessionProxy } from './SessionProxy';
 import { ShufersalSessionError } from './ShufersalSessionError';
@@ -240,14 +243,37 @@ function shufersalOrderEntryToItem(entry: ShufersalOrderEntry): ItemDetails {
     product.sellingMethod = SellingMethod.Unit;
     quantity = entry.quantity / entry.product.weightConversion;
   }
-  const pricePerUnit = parseFloat(
-    (entry.totalPrice.value / quantity).toFixed(2),
-  );
+
+  const basePricePerUnit = entry.basePrice.value;
+  let actualPricePerUnit: number;
+  let discountAmount: number | undefined;
+
+  if (entry.priceAfterDiscount !== undefined) {
+    actualPricePerUnit = parseFloat(
+      (entry.priceAfterDiscount / quantity).toFixed(2),
+    );
+    discountAmount = entry.discount ?? entry.itemDiscount;
+  } else {
+    actualPricePerUnit = parseFloat(
+      (entry.totalPrice.value / quantity).toFixed(2),
+    );
+  }
+
+  const promotions: PromotionInfo[] = (entry.promotionOrderEntries || [])
+    .filter((p) => p.fired)
+    .map((p) =>
+      extractPromotionInfo(p, basePricePerUnit, actualPricePerUnit, quantity),
+    );
+
   return {
     productCode: entry.product.code,
-    product: shufersalProductToProduct(entry.product),
-    quantity: quantity,
-    pricePerUnit,
+    product,
+    quantity,
+    pricePerUnit: actualPricePerUnit,
+    basePricePerUnit,
+    actualPricePerUnit,
+    discountAmount,
+    promotions,
     rawData: entry,
   };
 }
@@ -753,6 +779,55 @@ export class ShufersalSession {
   async serialize(): Promise<SerializedSessionData> {
     const cookies = await this.context.cookies();
     return { cookies };
+  }
+
+  async getPromotionDetails(
+    promotionCode: string,
+  ): Promise<ScrapedPromotionDetails> {
+    const url = `${WEBAPP_URL}/promotionPopup/${promotionCode}`;
+
+    const details = await this.page.evaluate(async (promotionUrl) => {
+      const response = await fetch(promotionUrl, {
+        method: 'GET',
+        mode: 'cors',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch promotion: ${String(response.status)}`,
+        );
+      }
+
+      const html = await response.text();
+
+      const result: {
+        regularPrice?: number;
+        promotionalPrice?: number;
+        validUntil?: string;
+      } = {};
+
+      const priceMatches = html.match(/(\d+\.?\d*)\s*₪/g);
+      if (priceMatches && priceMatches.length >= 2) {
+        result.regularPrice = parseFloat(priceMatches[0]);
+        result.promotionalPrice = parseFloat(priceMatches[1]);
+      }
+
+      const dateMatch = html.match(/עד\s*(\d{2}\/\d{2}\/\d{2,4})/);
+      if (dateMatch) {
+        const [day, month, year] = dateMatch[1].split('/');
+        const fullYear = year.length === 2 ? `20${year}` : year;
+        result.validUntil = `${fullYear}-${month}-${day}`;
+      }
+
+      return result;
+    }, url);
+
+    return {
+      regularPrice: details.regularPrice,
+      promotionalPrice: details.promotionalPrice,
+      validUntil: details.validUntil ? new Date(details.validUntil) : undefined,
+    };
   }
 
   async close(): Promise<void> {

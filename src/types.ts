@@ -277,11 +277,26 @@ export interface ShufersalProduct extends ShufersalBase {
   healthAttributes: { code: string; type: string }[];
 }
 
+export interface ShufersalPromotionOrderEntry {
+  fired: boolean;
+  couponCode: string | null;
+  conditionType: null;
+  promotionCode: string;
+  conditionValue: null;
+  promotionMessage: string;
+  conditionActualValue: null;
+  conditionMissingValue: null;
+}
+
 export interface ShufersalOrderEntry {
   entryNumber: number;
   quantity: number;
   basePrice: ShufersalPrice;
   totalPrice: ShufersalPrice;
+  priceAfterDiscount?: number;
+  discount?: number;
+  itemDiscount?: number;
+  promotionOrderEntries?: ShufersalPromotionOrderEntry[];
   product: ShufersalProduct;
 }
 
@@ -450,9 +465,53 @@ export interface CartItemToAdd extends Omit<Item, 'rawData'> {
   sellingMethod: SellingMethod;
 }
 
+export enum PromotionType {
+  SIMPLE_DISCOUNT = 'SIMPLE_DISCOUNT',
+  X_FOR_Y = 'X_FOR_Y',
+  BUY_X_GET_Y = 'BUY_X_GET_Y',
+  PERSONAL_COUPON = 'PERSONAL_COUPON',
+  UNKNOWN = 'UNKNOWN',
+}
+
+export interface PromotionConditions {
+  type: PromotionType;
+  originalPrice?: number;
+  discountedPrice?: number;
+  discountPercent?: number;
+  requiredQuantity?: number;
+  bundlePrice?: number;
+  effectivePricePerUnit?: number;
+  buyQuantity?: number;
+  getQuantity?: number;
+  effectiveDiscount?: number;
+  couponCode?: string;
+  discountAmount?: number;
+}
+
+export interface PromotionInfo {
+  code: string;
+  message: string;
+  type: PromotionType;
+  conditions: PromotionConditions;
+  couponCode?: string | null;
+}
+
+export interface ScrapedPromotionDetails {
+  regularPrice?: number;
+  promotionalPrice?: number;
+  validFrom?: Date;
+  validUntil?: Date;
+  eligibleProductCodes?: string[];
+  description?: string;
+}
+
 export interface ItemDetails extends Item {
   product: Product;
   pricePerUnit: number;
+  basePricePerUnit?: number;
+  actualPricePerUnit?: number;
+  discountAmount?: number;
+  promotions: PromotionInfo[];
 }
 
 export interface OrderInfo {
