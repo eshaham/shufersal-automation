@@ -131,6 +131,13 @@ function shufersalProductSearchResultToProduct(
     result.commercialCategorySubGroup,
   );
 
+  const promotionCodes =
+    result.promotionCodes?.filter(Boolean) ??
+    result.promotions?.filter(Boolean) ??
+    [];
+
+  const effectivePrice = result.effectivePrice ?? result.price.value;
+
   return {
     code: result.code,
     name: result.name,
@@ -142,8 +149,10 @@ function shufersalProductSearchResultToProduct(
     imageUrl: extractImageUrl(result.images),
     inStock: result.stock.stockLevelStatus.code === 'inStock',
     purchasable: result.purchasable ?? true,
-    price: result.price.value,
+    price: effectivePrice,
     formattedPrice: result.price.formattedValue,
+    priceWithoutDiscount: result.price.value,
+    promotionCodes,
     rawData: result,
   };
 }
@@ -227,8 +236,10 @@ function shufersalProductToProduct(product: ShufersalProduct): Product {
     imageUrl: extractImageUrl(product.images),
     inStock: product.stock.stockLevelStatus.code === 'inStock',
     purchasable: product.showOnSite || product.showOnMobile,
-    price: product.price.value,
+    price: product.effectivePrice,
     formattedPrice: product.price.formattedValue,
+    priceWithoutDiscount: product.price.value,
+    promotionCodes: product.promotionCodes,
     rawData: product,
   };
 }
@@ -244,15 +255,15 @@ function shufersalOrderEntryToItem(entry: ShufersalOrderEntry): ItemDetails {
     quantity = entry.quantity / entry.product.weightConversion;
   }
 
-  const basePricePerUnit = entry.basePrice.value;
+  const basePricePerUnit = parseFloat(entry.basePrice.value.toFixed(2));
   let actualPricePerUnit: number;
   let discountAmount: number | undefined;
 
-  if (entry.priceAfterDiscount !== undefined) {
+  if (entry.priceAfterDiscount != null) {
     actualPricePerUnit = parseFloat(
       (entry.priceAfterDiscount / quantity).toFixed(2),
     );
-    discountAmount = entry.discount ?? entry.itemDiscount;
+    discountAmount = entry.discount ?? entry.itemDiscount ?? undefined;
   } else {
     actualPricePerUnit = parseFloat(
       (entry.totalPrice.value / quantity).toFixed(2),
@@ -463,7 +474,10 @@ export class ShufersalSession {
     };
   }
 
-  async getOrderDetails(code: string): Promise<OrderDetails | undefined> {
+  async getOrderDetails(
+    code: string,
+    options?: { getFullPromotionData?: boolean },
+  ): Promise<OrderDetails | undefined> {
     const orderDetails = await this.apiRequest<ShufersalOrderDetails>({
       method: 'GET',
       path: `/my-account/orders/${code}`,
@@ -479,9 +493,29 @@ export class ShufersalSession {
       orderDetails,
       isBeingUpdated,
     );
+
+    const items = orderDetails.entries.map(shufersalOrderEntryToItem);
+
+    if (options?.getFullPromotionData) {
+      const promotionDetailsCache = new Map<string, ScrapedPromotionDetails>();
+
+      for (const item of items) {
+        for (const promotion of item.promotions) {
+          let details = promotionDetailsCache.get(promotion.code);
+          if (!details) {
+            details = await this.getPromotionDetails(promotion.code);
+            promotionDetailsCache.set(promotion.code, details);
+          }
+          promotion.participatingProducts = details.eligibleProductCodes
+            ? Array.from(new Set(details.eligibleProductCodes))
+            : undefined;
+        }
+      }
+    }
+
     return {
       ...order,
-      items: orderDetails.entries.map(shufersalOrderEntryToItem),
+      items,
       rawData: orderDetails,
     };
   }
@@ -800,11 +834,14 @@ export class ShufersalSession {
       }
 
       const html = await response.text();
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
 
       const result: {
         regularPrice?: number;
         promotionalPrice?: number;
         validUntil?: string;
+        eligibleProductCodes?: string[];
       } = {};
 
       const priceMatches = html.match(/(\d+\.?\d*)\s*₪/g);
@@ -820,6 +857,13 @@ export class ShufersalSession {
         result.validUntil = `${fullYear}-${month}-${day}`;
       }
 
+      const productElements = doc.querySelectorAll('[data-product-code]');
+      if (productElements.length > 0) {
+        result.eligibleProductCodes = Array.from(productElements)
+          .map((el) => el.getAttribute('data-product-code'))
+          .filter((code): code is string => code !== null);
+      }
+
       return result;
     }, url);
 
@@ -827,6 +871,7 @@ export class ShufersalSession {
       regularPrice: details.regularPrice,
       promotionalPrice: details.promotionalPrice,
       validUntil: details.validUntil ? new Date(details.validUntil) : undefined,
+      eligibleProductCodes: details.eligibleProductCodes,
     };
   }
 

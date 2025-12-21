@@ -265,16 +265,16 @@ export interface ShufersalProduct extends ShufersalBase {
   effectivePricePerUnit: number;
   remarks: string | null;
   longTail: boolean;
-  isBeProduct: boolean;
-  calories: number | null;
-  fats: number | null;
-  sodium: number | null;
-  sugar: number | null;
-  weightConversion: number | null;
-  weightIncrement: number | null;
-  maxWeight: number | null;
-  minWeight: number | null;
-  healthAttributes: { code: string; type: string }[];
+  isBeProduct: boolean | null;
+  calories?: number | null;
+  fats?: number | null;
+  sodium?: number | null;
+  sugar?: number | null;
+  weightConversion?: number | null;
+  weightIncrement?: number | null;
+  maxWeight?: number | null;
+  minWeight?: number | null;
+  healthAttributes?: { code: string; type: string }[];
 }
 
 export interface ShufersalPromotionOrderEntry {
@@ -344,10 +344,14 @@ export interface ShufersalProductSearchResult extends ShufersalBase {
   };
   categoryPrice?: ShufersalPrice;
   pricePerUnit?: ShufersalPrice;
+  pricePerUnitWithoutDiscount?: ShufersalPrice | null;
   unitForComparison?: string;
   unitDescription?: string;
   promotions?: string[] | null;
   promotionMsg?: string | null;
+  promotionCodes?: string[] | null;
+  effectivePrice?: number | null;
+  effectivePricePerUnit?: number | null;
   cartStatus?: {
     inCart: boolean;
     qty?: number;
@@ -446,6 +450,8 @@ export interface Product {
   purchasable: boolean;
   price: number;
   formattedPrice: string;
+  priceWithoutDiscount: number;
+  promotionCodes: string[];
   rawData: unknown;
 }
 
@@ -494,6 +500,7 @@ export interface PromotionInfo {
   type: PromotionType;
   conditions: PromotionConditions;
   couponCode?: string | null;
+  participatingProducts?: string[];
 }
 
 export interface ScrapedPromotionDetails {

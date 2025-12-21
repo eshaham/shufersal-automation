@@ -40,7 +40,9 @@ async function automate(bot: ShufersalBot, username: string, password: string) {
   const orders = await session.getOrders();
   const lastOrder = orders.closedOrders[0] as OrderInfo | undefined;
   if (lastOrder) {
-    const orderDetails = await session.getOrderDetails(lastOrder.code);
+    const orderDetails = await session.getOrderDetails(lastOrder.code, {
+      getFullPromotionData: true,
+    });
     if (!orderDetails) {
       console.log('Failed to get order details');
       return;
