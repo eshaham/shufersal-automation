@@ -352,6 +352,7 @@ export interface ShufersalProductSearchResult extends ShufersalBase {
   promotionCodes?: string[] | null;
   effectivePrice?: number | null;
   effectivePricePerUnit?: number | null;
+  depositPrice?: number | null;
   cartStatus?: {
     inCart: boolean;
     qty?: number;
@@ -451,6 +452,7 @@ export interface Product {
   price: number;
   formattedPrice: string;
   priceWithoutDiscount: number;
+  depositPrice?: number;
   promotionCodes: string[];
   rawData: unknown;
 }

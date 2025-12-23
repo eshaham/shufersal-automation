@@ -152,6 +152,7 @@ function shufersalProductSearchResultToProduct(
     price: effectivePrice,
     formattedPrice: result.price.formattedValue,
     priceWithoutDiscount: result.price.value,
+    depositPrice: result.depositPrice ?? undefined,
     promotionCodes,
     rawData: result,
   };
@@ -239,6 +240,7 @@ function shufersalProductToProduct(product: ShufersalProduct): Product {
     price: product.effectivePrice,
     formattedPrice: product.price.formattedValue,
     priceWithoutDiscount: product.price.value,
+    depositPrice: product.depositPrice ?? undefined,
     promotionCodes: product.promotionCodes,
     rawData: product,
   };
