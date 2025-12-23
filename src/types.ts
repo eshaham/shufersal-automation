@@ -520,6 +520,7 @@ export interface ItemDetails extends Item {
   basePricePerUnit?: number;
   actualPricePerUnit?: number;
   discountAmount?: number;
+  depositPrice?: number;
   promotions: PromotionInfo[];
 }
 

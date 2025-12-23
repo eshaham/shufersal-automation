@@ -286,6 +286,7 @@ function shufersalOrderEntryToItem(entry: ShufersalOrderEntry): ItemDetails {
     basePricePerUnit,
     actualPricePerUnit,
     discountAmount,
+    depositPrice: entry.product.depositPrice,
     promotions,
     rawData: entry,
   };
