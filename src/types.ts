@@ -306,19 +306,6 @@ export interface ShufersalOrderDetails extends ShufersalOrder {
 
 // Cart
 
-export interface ShufersalCartItem {
-  entryNumber: number;
-  productCode: string;
-  productName: string;
-  cartyQty: number;
-  recommendation:
-    | 'NONE'
-    | 'PROMOTION'
-    | 'ADD_AND_SAVE'
-    | 'SWITCH_AND_SAVE'
-    | 'SWITCH';
-}
-
 export interface ShufersalCartItemAdd {
   productCode: string;
   frontQuantity: number;
@@ -465,7 +452,7 @@ export interface Item {
 
 export interface ExistingCartItem extends Item {
   entryNumber: number;
-  productName: string;
+  itemPrice: number;
   inStock: boolean;
 }
 

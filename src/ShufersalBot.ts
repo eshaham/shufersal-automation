@@ -19,7 +19,6 @@ import {
   ShufersalAccountOrders,
   ShufersalAvailableTimeSlotsResponse,
   ShufersalBase,
-  ShufersalCartItem,
   ShufersalCartItemAdd,
   ShufersalOrder,
   ShufersalOrderDetails,
@@ -292,20 +291,6 @@ function shufersalOrderEntryToItem(entry: ShufersalOrderEntry): ItemDetails {
   };
 }
 
-function shufersalCartItemToItem(
-  cartItem: ShufersalCartItem,
-  outOfStockProductCodes: string[],
-): ExistingCartItem {
-  return {
-    entryNumber: cartItem.entryNumber,
-    productCode: cartItem.productCode,
-    productName: cartItem.productName,
-    quantity: cartItem.cartyQty,
-    inStock: !outOfStockProductCodes.includes(cartItem.productCode),
-    rawData: cartItem,
-  };
-}
-
 function shufersalTimeSlotToDeliveryTimeSlot(
   shufersalTimeSlot: ShufersalTimeSlot,
 ): DeliveryTimeSlot | null {
@@ -575,17 +560,60 @@ export class ShufersalSession {
   }
 
   async getCartItems(): Promise<ExistingCartItem[]> {
-    const cartItems = await this.apiRequest<ShufersalCartItem[]>({
-      method: 'GET',
-      path: '/recommendations/entry-recommendations',
+    const result = await this.page.evaluate(async (url) => {
+      const response = await fetch(url, {
+        method: 'GET',
+        mode: 'cors',
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        throw new Error(
+          `Request failed with status ${String(response.status)}`,
+        );
+      }
+      const html = await response.text();
+
+      const match = html.match(/DyPurchaseEventData\s*=\s*(\{[\s\S]*?\});/);
+      if (!match) {
+        return { cart: [], outOfStockCodes: [] };
+      }
+
+      const data = JSON.parse(match[1]) as {
+        properties: {
+          cart: Array<{
+            productId: string;
+            quantity: number;
+            itemPrice: number;
+          }>;
+        };
+      };
+
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      const disabledElements = doc.querySelectorAll(
+        '[data-product-code][aria-disabled="true"]',
+      );
+      const outOfStockCodes = Array.from(disabledElements)
+        .map((el) => el.getAttribute('data-product-code'))
+        .filter((code): code is string => code !== null);
+
+      return {
+        cart: data.properties.cart,
+        outOfStockCodes: Array.from(new Set(outOfStockCodes)),
+      };
+    }, `${WEBAPP_URL}/cart/cartsummary`);
+
+    return result.cart.map((item, index) => {
+      const productCode = item.productId.replace(/^P_/, '');
+      return {
+        entryNumber: index,
+        productCode,
+        quantity: item.quantity,
+        itemPrice: item.itemPrice,
+        inStock: !result.outOfStockCodes.includes(productCode),
+        rawData: item,
+      };
     });
-    if (!cartItems) {
-      return [];
-    }
-    const outOfStockProductCodes = await this.getOutOfStockProductCodes();
-    return cartItems.map((item) =>
-      shufersalCartItemToItem(item, outOfStockProductCodes),
-    );
   }
 
   async getAvailableTimeSlots(): Promise<DeliveryTimeSlot[]> {
@@ -890,33 +918,6 @@ export class ShufersalSession {
         throw error;
       }
     }
-  }
-
-  private async getOutOfStockProductCodes(): Promise<string[]> {
-    const productCodes = await this.page.evaluate(async (url) => {
-      const response = await fetch(url, {
-        method: 'GET',
-        mode: 'cors',
-        credentials: 'include',
-      });
-      if (!response.ok) {
-        throw new Error(
-          `Request failed with status ${String(response.status)}`,
-        );
-      }
-      const html = await response.text();
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(html, 'text/html');
-      const disabledElements = doc.querySelectorAll(
-        '[data-product-code][aria-disabled="true"]',
-      );
-      const codes = Array.from(disabledElements)
-        .map((el) => el.getAttribute('data-product-code'))
-        .filter((code): code is string => code !== null);
-      return Array.from(new Set(codes));
-    }, `${WEBAPP_URL}/cart/load?restoreCart=true`);
-
-    return productCodes;
   }
 
   private async getCSRFToken(): Promise<string> {
