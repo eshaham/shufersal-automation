@@ -589,47 +589,32 @@ export class ShufersalSession {
       }
       const html = await response.text();
 
-      const match = html.match(/DyPurchaseEventData\s*=\s*(\{[\s\S]*?\});/);
-      if (!match) {
-        return { cart: [], outOfStockCodes: [] };
-      }
-
-      const data = JSON.parse(match[1]) as {
-        properties: {
-          cart: Array<{
-            productId: string;
-            quantity: number;
-            itemPrice: number;
-          }>;
-        };
-      };
-
       const parser = new DOMParser();
       const doc = parser.parseFromString(html, 'text/html');
-      const disabledElements = doc.querySelectorAll(
-        '[data-product-code][aria-disabled="true"]',
-      );
-      const outOfStockCodes = Array.from(disabledElements)
-        .map((el) => el.getAttribute('data-product-code'))
-        .filter((code): code is string => code !== null);
 
-      return {
-        cart: data.properties.cart,
-        outOfStockCodes: Array.from(new Set(outOfStockCodes)),
-      };
-    }, `${WEBAPP_URL}/cart/cartsummary`);
+      const cartElements = doc.querySelectorAll('article[data-product-code]');
+      const cartItems = Array.from(cartElements).map((el) => {
+        const productCode = el.getAttribute('data-product-code') || '';
+        const quantity = parseFloat(el.getAttribute('data-entry-qty') || '0');
+        const isOutOfStock = el.classList.contains(
+          'miglog-cart-prod-notInStock',
+        );
+        const priceEl = el.querySelector('.miglog-prod-totalPrize');
+        const priceText = priceEl?.textContent?.trim() || '0';
+        const itemPrice = parseFloat(priceText.replace(/[^\d.]/g, '')) || 0;
+        return { productCode, quantity, itemPrice, isOutOfStock };
+      });
 
-    return result.cart.map((item, index) => {
-      const productCode = item.productId;
-      const codeWithoutPrefix = productCode.replace(/^P_/, '');
+      return { cartItems };
+    }, `${WEBAPP_URL}/cart/load?restoreCart=true`);
+
+    return result.cartItems.map((item, index) => {
       return {
         entryNumber: index,
-        productCode,
+        productCode: item.productCode,
         quantity: item.quantity,
         itemPrice: item.itemPrice,
-        inStock:
-          !result.outOfStockCodes.includes(productCode) &&
-          !result.outOfStockCodes.includes(codeWithoutPrefix),
+        inStock: !item.isOutOfStock,
         rawData: item,
       };
     });
