@@ -620,13 +620,16 @@ export class ShufersalSession {
     }, `${WEBAPP_URL}/cart/cartsummary`);
 
     return result.cart.map((item, index) => {
-      const productCode = item.productId.replace(/^P_/, '');
+      const productCode = item.productId;
+      const codeWithoutPrefix = productCode.replace(/^P_/, '');
       return {
         entryNumber: index,
         productCode,
         quantity: item.quantity,
         itemPrice: item.itemPrice,
-        inStock: !result.outOfStockCodes.includes(productCode),
+        inStock:
+          !result.outOfStockCodes.includes(productCode) &&
+          !result.outOfStockCodes.includes(codeWithoutPrefix),
         rawData: item,
       };
     });
