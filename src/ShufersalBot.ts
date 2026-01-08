@@ -485,18 +485,34 @@ export class ShufersalSession {
     const items = orderDetails.entries.map(shufersalOrderEntryToItem);
 
     if (options?.getFullPromotionData) {
-      const promotionDetailsCache = new Map<string, ScrapedPromotionDetails>();
+      const promotionCache = new Map<string, ScrapedPromotionDetails>();
+      const productFallbackCache = new Map<
+        string,
+        ScrapedPromotionDetails | null
+      >();
 
       for (const item of items) {
         for (const promotion of item.promotions) {
-          let details = promotionDetailsCache.get(promotion.code);
+          let details = promotionCache.get(promotion.code);
           if (!details) {
-            details = await this.getPromotionDetails(promotion.code);
-            promotionDetailsCache.set(promotion.code, details);
+            details =
+              (await this.getPromotionDetails(promotion.code)) ?? undefined;
           }
-          promotion.participatingProducts = details.eligibleProductCodes
-            ? Array.from(new Set(details.eligibleProductCodes))
-            : undefined;
+          if (!details) {
+            if (!productFallbackCache.has(item.productCode)) {
+              productFallbackCache.set(
+                item.productCode,
+                await this.getPromotionsByProduct(item.productCode),
+              );
+            }
+            details = productFallbackCache.get(item.productCode) ?? undefined;
+          }
+          if (details) {
+            promotionCache.set(promotion.code, details);
+            promotion.participatingProducts = details.eligibleProductCodes
+              ? Array.from(new Set(details.eligibleProductCodes))
+              : undefined;
+          }
         }
       }
     }
@@ -848,7 +864,7 @@ export class ShufersalSession {
 
   async getPromotionDetails(
     promotionCode: string,
-  ): Promise<ScrapedPromotionDetails> {
+  ): Promise<ScrapedPromotionDetails | null> {
     const url = `${WEBAPP_URL}/promotionPopup/${promotionCode}`;
 
     const details = await this.page.evaluate(async (promotionUrl) => {
@@ -859,9 +875,7 @@ export class ShufersalSession {
       });
 
       if (!response.ok) {
-        throw new Error(
-          `Failed to fetch promotion: ${String(response.status)}`,
-        );
+        return null;
       }
 
       const html = await response.text();
@@ -897,6 +911,91 @@ export class ShufersalSession {
 
       return result;
     }, url);
+
+    if (!details) {
+      return null;
+    }
+
+    return {
+      regularPrice: details.regularPrice,
+      promotionalPrice: details.promotionalPrice,
+      validUntil: details.validUntil ? new Date(details.validUntil) : undefined,
+      eligibleProductCodes: details.eligibleProductCodes,
+    };
+  }
+
+  async getPromotionsByProduct(
+    productCode: string,
+  ): Promise<ScrapedPromotionDetails | null> {
+    const url = `${WEBAPP_URL}/promotions/addAndSave/${productCode}`;
+
+    const details = await this.page.evaluate(async (promotionUrl) => {
+      const response = await fetch(promotionUrl, {
+        method: 'GET',
+        mode: 'cors',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const text = await response.text();
+
+      if (!text) {
+        return null;
+      }
+
+      let data: {
+        htmlFragment?: string;
+        product?: {
+          code?: string;
+          price?: { value?: number };
+        };
+      };
+
+      try {
+        data = JSON.parse(text) as typeof data;
+      } catch {
+        return null;
+      }
+
+      const result: {
+        regularPrice?: number;
+        promotionalPrice?: number;
+        validUntil?: string;
+        eligibleProductCodes?: string[];
+      } = {};
+
+      if (data.product?.price?.value) {
+        result.regularPrice = data.product.price.value;
+      }
+
+      if (data.htmlFragment) {
+        const priceMatch = data.htmlFragment.match(/(\d+)\s*<span[^>]*>\s*₪/);
+        if (priceMatch) {
+          result.promotionalPrice = parseFloat(priceMatch[1]);
+        }
+
+        const dateMatch = data.htmlFragment.match(
+          /בתוקף עד\s*(\d{2})\/(\d{2})\/(\d{4})/,
+        );
+        if (dateMatch) {
+          const [, day, month, year] = dateMatch;
+          result.validUntil = `${year}-${month}-${day}`;
+        }
+      }
+
+      if (data.product?.code) {
+        result.eligibleProductCodes = [data.product.code.replace(/^P_/, '')];
+      }
+
+      return result;
+    }, url);
+
+    if (!details) {
+      return null;
+    }
 
     return {
       regularPrice: details.regularPrice,
