@@ -277,6 +277,9 @@ function shufersalOrderEntryToItem(entry: ShufersalOrderEntry): ItemDetails {
       extractPromotionInfo(p, basePricePerUnit, actualPricePerUnit, quantity),
     );
 
+  const outOfStock =
+    entry.basePrice.value === 0 && entry.product.price.value > 0;
+
   return {
     productCode: entry.product.code,
     product,
@@ -287,6 +290,7 @@ function shufersalOrderEntryToItem(entry: ShufersalOrderEntry): ItemDetails {
     discountAmount,
     depositPrice: entry.product.depositPrice,
     promotions,
+    outOfStock,
     rawData: entry,
   };
 }

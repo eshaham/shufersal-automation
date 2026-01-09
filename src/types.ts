@@ -509,6 +509,7 @@ export interface ItemDetails extends Item {
   discountAmount?: number;
   depositPrice?: number;
   promotions: PromotionInfo[];
+  outOfStock: boolean;
 }
 
 export interface OrderInfo {
