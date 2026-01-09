@@ -600,7 +600,7 @@ export class ShufersalSession {
           'miglog-cart-prod-notInStock',
         );
         const priceEl = el.querySelector('.miglog-prod-totalPrize');
-        const priceText = priceEl?.textContent?.trim() || '0';
+        const priceText = (priceEl?.textContent ?? '').trim() || '0';
         const itemPrice = parseFloat(priceText.replace(/[^\d.]/g, '')) || 0;
         return { productCode, quantity, itemPrice, isOutOfStock };
       });
