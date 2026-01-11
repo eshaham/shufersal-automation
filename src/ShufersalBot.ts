@@ -700,15 +700,19 @@ export class ShufersalSession {
     await this.page.click('.miglog-cart-summary-checkoutLink');
 
     const giftModal = await this.page
-      .waitForSelector('#giftProductsModal', {
+      .waitForSelector('.giftProductsModal', {
         visible: true,
         timeout: ACTION_TIMEOUT,
       })
       .catch(() => null);
 
     if (giftModal) {
-      await this.page.click('#giftProductsModal .btnClose');
-      await this.page.click('.miglog-cart-summary-checkoutLink');
+      console.info('createOrder: Dismissing gift selection modal');
+      await this.page.click('.giftProductsModal .btnClose');
+      await this.page.waitForSelector('.giftProductsModal', {
+        hidden: true,
+        timeout: ACTION_TIMEOUT,
+      });
     }
 
     await this.page.waitForSelector('#j_password', {
