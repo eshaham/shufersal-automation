@@ -708,7 +708,19 @@ export class ShufersalSession {
 
     if (giftModal) {
       console.info('createOrder: Dismissing gift selection modal');
-      await this.page.click('.giftProductsModal .modal-header .btnClose');
+      const buttonClicked = await this.page.evaluate(() => {
+        const closeButton = document.querySelector<HTMLElement>(
+          '.giftProductsModal .modal-header .btnClose',
+        );
+        if (closeButton) {
+          closeButton.click();
+          return true;
+        }
+        return false;
+      });
+      if (!buttonClicked) {
+        throw new Error('Failed to find gift modal close button');
+      }
       await this.page.click('.miglog-cart-summary-checkoutLink');
     }
 
