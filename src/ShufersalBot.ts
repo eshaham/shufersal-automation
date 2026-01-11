@@ -709,10 +709,7 @@ export class ShufersalSession {
     if (giftModal) {
       console.info('createOrder: Dismissing gift selection modal');
       await this.page.click('.giftProductsModal .btnClose');
-      await this.page.waitForSelector('.giftProductsModal', {
-        hidden: true,
-        timeout: ACTION_TIMEOUT,
-      });
+      await this.page.click('.miglog-cart-summary-checkoutLink');
     }
 
     await this.page.waitForSelector('#j_password', {
