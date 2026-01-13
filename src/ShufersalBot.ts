@@ -600,21 +600,25 @@ export class ShufersalSession {
       const cartItems = Array.from(cartElements).map((el) => {
         const productCode = el.getAttribute('data-product-code') || '';
         const quantity = parseFloat(el.getAttribute('data-entry-qty') || '0');
+        const entryNumber = parseInt(
+          el.getAttribute('data-entry-number') || '0',
+          10,
+        );
         const isOutOfStock = el.classList.contains(
           'miglog-cart-prod-notInStock',
         );
         const priceEl = el.querySelector('.miglog-prod-totalPrize');
         const priceText = (priceEl?.textContent ?? '').trim() || '0';
         const itemPrice = parseFloat(priceText.replace(/[^\d.]/g, '')) || 0;
-        return { productCode, quantity, itemPrice, isOutOfStock };
+        return { productCode, quantity, entryNumber, itemPrice, isOutOfStock };
       });
 
       return { cartItems };
     }, `${WEBAPP_URL}/cart/load?restoreCart=true`);
 
-    return result.cartItems.map((item, index) => {
+    return result.cartItems.map((item) => {
       return {
-        entryNumber: index,
+        entryNumber: item.entryNumber,
         productCode: item.productCode,
         quantity: item.quantity,
         itemPrice: item.itemPrice,
