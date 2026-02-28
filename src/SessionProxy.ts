@@ -1,50 +1,47 @@
 import { ShufersalSession } from './ShufersalBot';
 import { ShufersalSessionError } from './ShufersalSessionError';
 
+type SessionMethod = (...args: unknown[]) => Promise<unknown>;
+
+const diagnosticMethods = new Set(['takeScreenshot', 'takePageContent']);
+
 export function createSessionProxy(
   session: ShufersalSession,
 ): ShufersalSession {
   return new Proxy(session, {
     get(target, prop, receiver) {
-      const original = Reflect.get(
-        target,
-        prop,
-        receiver,
-      ) as unknown as ShufersalSession[keyof ShufersalSession];
+      const value = Reflect.get(target, prop, receiver) as unknown;
 
-      if (typeof original === 'function' && prop !== 'takeScreenshot') {
-        return async function (
-          this: ShufersalSession,
-          ...args: unknown[]
-        ): Promise<unknown> {
-          try {
-            return await (
-              original as (...args: unknown[]) => Promise<unknown>
-            ).apply(target, args);
-          } catch (error) {
-            if (error instanceof Error) {
-              let screenshot: Buffer | null = null;
-              try {
-                screenshot = await target.takeScreenshot();
-              } catch (screenshotError) {
-                console.warn(
-                  'Failed to capture error screenshot:',
-                  screenshotError,
-                );
-              }
-
-              throw new ShufersalSessionError(
-                error.message,
-                error,
-                screenshot || undefined,
-              );
-            }
-            throw error;
-          }
-        };
+      if (
+        typeof value !== 'function' ||
+        diagnosticMethods.has(prop as string)
+      ) {
+        return value;
       }
 
-      return original as unknown;
+      const method = value as SessionMethod;
+
+      return async (...args: unknown[]) => {
+        try {
+          return await method.apply(target, args);
+        } catch (error) {
+          if (!(error instanceof Error)) {
+            throw error;
+          }
+
+          const [screenshot, pageContent] = await Promise.allSettled([
+            target.takeScreenshot(),
+            target.takePageContent(),
+          ]);
+
+          throw new ShufersalSessionError(
+            error.message,
+            error,
+            screenshot.status === 'fulfilled' ? screenshot.value : undefined,
+            pageContent.status === 'fulfilled' ? pageContent.value : undefined,
+          );
+        }
+      };
     },
   });
 }

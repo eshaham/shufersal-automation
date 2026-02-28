@@ -862,6 +862,10 @@ export class ShufersalSession {
     return this.page.screenshot() as Promise<Buffer>;
   }
 
+  async takePageContent(): Promise<string> {
+    return this.page.content();
+  }
+
   async verifySessionAlive(): Promise<void> {
     await this.page.evaluate(() => document.title);
   }
@@ -1145,19 +1149,15 @@ export class ShufersalBot {
       }
     } catch (error) {
       if (this.options.takeScreenshotOnErrors && error instanceof Error) {
-        let screenshot: Buffer | null = null;
-        try {
-          screenshot = await session.takeScreenshot();
-        } catch (screenshotError) {
-          console.warn(
-            'Failed to capture screenshot on error:',
-            screenshotError,
-          );
-        }
+        const [screenshot, pageContent] = await Promise.allSettled([
+          session.takeScreenshot(),
+          session.takePageContent(),
+        ]);
         throw new ShufersalSessionError(
           error.message,
           error,
-          screenshot || undefined,
+          screenshot.status === 'fulfilled' ? screenshot.value : undefined,
+          pageContent.status === 'fulfilled' ? pageContent.value : undefined,
         );
       }
       throw error;
