@@ -737,13 +737,35 @@ export class ShufersalSession {
     });
 
     console.info('createOrder: Submitting password');
-    await Promise.all([
-      this.page.waitForNavigation({
-        waitUntil: 'domcontentloaded',
-        timeout: NAVIGATION_TIMEOUT,
-      }),
-      this.page.click('#checkoutPwd button[type="submit"]'),
+    await this.page.click('#checkoutPwd button[type="submit"]');
+
+    const passwordResult = await Promise.race([
+      this.page
+        .waitForFunction(
+          () => !window.location.href.includes('/cart/cartsummary'),
+          { timeout: NAVIGATION_TIMEOUT },
+        )
+        .then(() => 'navigation' as const)
+        .catch(() => null),
+      this.page
+        .waitForSelector(
+          '#checkoutPwd .field-validation-error, .confirmPassword .globalMessage',
+          {
+            visible: true,
+            timeout: NAVIGATION_TIMEOUT,
+          },
+        )
+        .then(() => 'error' as const)
+        .catch(() => null),
     ]);
+
+    if (passwordResult === 'error') {
+      throw new Error('Checkout password verification failed');
+    }
+
+    if (passwordResult === null) {
+      throw new Error('Checkout password verification timed out');
+    }
     console.info('createOrder: Password navigation completed');
 
     const missingProductsModal = await this.page
