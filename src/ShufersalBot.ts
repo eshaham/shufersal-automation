@@ -885,7 +885,16 @@ export class ShufersalSession {
   }
 
   async takePageContent(): Promise<string> {
-    return this.page.content();
+    const cdp = await this.page.createCDPSession();
+    try {
+      const { root } = await cdp.send('DOM.getDocument', { depth: 0 });
+      const { outerHTML } = await cdp.send('DOM.getOuterHTML', {
+        nodeId: root.nodeId,
+      });
+      return outerHTML;
+    } finally {
+      await cdp.detach();
+    }
   }
 
   async verifySessionAlive(): Promise<void> {
