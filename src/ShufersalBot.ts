@@ -867,9 +867,9 @@ export class ShufersalSession {
       throw new Error(`Order ${orderNumber} not found`);
     }
 
-    if (order.isActive) {
+    if (order.status === OrderStatus.Active) {
       throw new Error(
-        `Cannot send receipt for order ${orderNumber}: order is still active`,
+        `Cannot send receipt for order ${orderNumber}: order has not been shipped yet`,
       );
     }
 
