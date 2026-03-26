@@ -799,6 +799,12 @@ export class ShufersalSession {
       await new Promise((resolve) => setTimeout(resolve, 3000));
     }
 
+    console.info('createOrder: Waiting for confirm button');
+    await this.page.waitForSelector('.btnConfirm', {
+      visible: true,
+      timeout: NAVIGATION_TIMEOUT,
+    });
+
     console.info('createOrder: Confirming order');
     await Promise.all([
       this.page.waitForNavigation({
