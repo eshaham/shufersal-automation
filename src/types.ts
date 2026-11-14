@@ -315,6 +315,17 @@ export interface ShufersalCartItemAdd {
   longTail: boolean;
 }
 
+export interface ShufersalCheckoutEntry extends ShufersalOrderEntry {
+  outOfStock?: boolean;
+}
+
+export interface ShufersalComposedCheckout {
+  directCart: {
+    entries: ShufersalCheckoutEntry[];
+    consignments?: { timeSlotStartTime: number | null }[];
+  };
+}
+
 export interface ShufersalProductSearchResult extends ShufersalBase {
   url: string;
   description: string;
@@ -478,6 +489,23 @@ export interface ExistingCartItem extends Item {
   entryNumber: number;
   itemPrice: number;
   inStock: boolean;
+}
+
+export interface CartState {
+  items: ExistingCartItem[];
+  orderInUpdateMode: string | null;
+}
+
+export interface CartModification {
+  productCode: string;
+  statusCode: string;
+  entryNumber: number | null;
+  quantity: number | null;
+  rawData: Record<string, string | number | boolean>;
+}
+
+export interface CartMutationResult extends CartState {
+  modifications: CartModification[];
 }
 
 export interface CartItemToAdd extends Omit<Item, 'rawData'> {

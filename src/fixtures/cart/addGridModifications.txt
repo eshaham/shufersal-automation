@@ -1,0 +1,86 @@
+<script>
+
+
+ 
+
+          window.miglog = window.miglog || {};
+     window.miglog.cart = window.miglog.cart || {};
+       
+        
+        window.miglog.cart.recentModificationsType='addgrid';
+        
+        window.miglog.cart.modifications=[
+            
+       
+            {
+                
+                statusCode:'success',
+                
+                dimension36:0,
+                entry:0,
+                
+                productCode:'P_7296073151548',
+                
+                name:'מלח בישול גס',
+                
+                id:'7296073151548',
+                
+                price:'2.09',
+                
+                    totalPrice:'4.18',
+                
+                    brand:'שופרסל',
+                
+                sellingMethod:'BY_UNIT',
+                dimension35:true,
+  
+                
+                quantity:2,
+                
+                productType: 'FOOD',
+                
+                    TypeBe: 'Others'
+                 
+            }
+            
+                ,
+            
+       
+            {
+                
+                statusCode:'success',
+                
+                dimension36:1,
+                entry:1,
+                
+                productCode:'P_7296073151555',
+                
+                name:'מלח שולחן דק',
+                
+                id:'7296073151555',
+                
+                price:'2.09',
+                
+                    totalPrice:'2.09',
+                
+                    brand:'שופרסל',
+                
+                sellingMethod:'BY_UNIT',
+                dimension35:true,
+  
+                
+                quantity:1,
+                
+                productType: 'FOOD',
+                
+                    TypeBe: 'Others'
+                 
+            }
+            
+            
+        ];
+        window.miglog.cart.cartTotalValue='6.27';
+         
+   
+        window.miglog.eventEmitter.emit('cart:modification',window.miglog.cart.modifications,window.miglog.cart.recentModificationsType, window.miglog.cart.modificationsContext);
+

@@ -3,6 +3,8 @@ import assert from 'assert';
 import {
   AccountOrders,
   CartItemToAdd,
+  CartMutationResult,
+  CartState,
   DeliveryTimeSlot,
   ExistingCartItem,
   ItemDetails,
@@ -21,6 +23,8 @@ import {
   ShufersalBase,
   ShufersalCartItemAdd,
   ShufersalCheckoutAuthResponse,
+  ShufersalCheckoutEntry,
+  ShufersalComposedCheckout,
   ShufersalOrder,
   ShufersalOrderDetails,
   ShufersalOrderEntry,
@@ -38,6 +42,11 @@ import timezone from 'dayjs/plugin/timezone';
 import utc from 'dayjs/plugin/utc';
 import puppeteer, { Browser, BrowserContext, Page } from 'puppeteer-core';
 
+import {
+  parseOrderCodeFromRedirect,
+  RawCartPage,
+  rawCartPageToCartMutationResult,
+} from './cartParser';
 import { extractPromotionInfo } from './promotions';
 import { parseReceipt } from './receiptParser';
 import { createSessionProxy } from './SessionProxy';
@@ -51,6 +60,13 @@ export class InvalidCredentialsError extends Error {
   constructor(message = 'Invalid credentials') {
     super(message);
     this.name = 'InvalidCredentialsError';
+  }
+}
+
+export class SessionExpiredError extends Error {
+  constructor(message = 'Persisted session has expired') {
+    super(message);
+    this.name = 'SessionExpiredError';
   }
 }
 
@@ -92,7 +108,7 @@ export const BASE_URL = 'https://www.shufersal.co.il';
 export const WEBAPP_URL = `${BASE_URL}/online/he`;
 
 const NAVIGATION_TIMEOUT = 30_000;
-const LOGIN_VERIFICATION_TIMEOUT = 60_000;
+const CART_PATH = '/cart/load?restoreCart=true';
 
 function stripCategoryCodePrefix(
   category: ShufersalBase | null,
@@ -383,12 +399,37 @@ interface ApiRequestConfig {
   form?: Record<string, string>;
 }
 
+type ResponseFormat = 'json' | 'cart';
+
+export interface CartEntryOptions {
+  entryNumber?: number;
+}
+
+export interface OrderLookupOptions {
+  detectUpdateMode?: boolean;
+}
+
+function isCheckoutEntryOutOfStock(entry: ShufersalCheckoutEntry): boolean {
+  return (
+    entry.outOfStock === true ||
+    entry.product.stock.stockLevelStatus.code === 'outOfStock'
+  );
+}
+
 export class ShufersalSession {
+  private csrfToken: string | undefined;
+
   constructor(
     private context: BrowserContext,
     private page: Page,
     private credentials: ShufersalCredentials,
-  ) {}
+  ) {
+    page.on('framenavigated', (frame) => {
+      if (frame === page.mainFrame()) {
+        this.csrfToken = undefined;
+      }
+    });
+  }
 
   get browserContext(): BrowserContext {
     return this.context;
@@ -483,7 +524,7 @@ export class ShufersalSession {
     return shufersalProductToProduct(productDetails);
   }
 
-  async getOrders(): Promise<AccountOrders> {
+  async getOrders(options?: OrderLookupOptions): Promise<AccountOrders> {
     const accountOrders = await this.apiRequest<ShufersalAccountOrders>({
       method: 'GET',
       path: '/my-account/orders',
@@ -492,7 +533,9 @@ export class ShufersalSession {
       throw new Error('Failed to get orders');
     }
 
-    const orderInUpdateMode = await this.getOrderInUpdateMode();
+    const orderInUpdateMode = options?.detectUpdateMode
+      ? await this.getOrderInUpdateMode()
+      : null;
     return {
       activeOrders: accountOrders.activeOrders.map((order) =>
         shufersalAccountOrderToOrderInfo(
@@ -511,7 +554,7 @@ export class ShufersalSession {
 
   async getOrderDetails(
     code: string,
-    options?: { getFullPromotionData?: boolean },
+    options?: { getFullPromotionData?: boolean } & OrderLookupOptions,
   ): Promise<OrderDetails | undefined> {
     const orderDetails = await this.apiRequest<ShufersalOrderDetails>({
       method: 'GET',
@@ -521,7 +564,9 @@ export class ShufersalSession {
       return undefined;
     }
 
-    const orderInUpdateMode = await this.getOrderInUpdateMode();
+    const orderInUpdateMode = options?.detectUpdateMode
+      ? await this.getOrderInUpdateMode()
+      : null;
     const isBeingUpdated = orderInUpdateMode === code;
 
     const order = shufersalAccountOrderToOrderInfo(
@@ -571,30 +616,66 @@ export class ShufersalSession {
     };
   }
 
-  async addToCart(items: CartItemToAdd[]): Promise<void> {
-    const shufersalCartEntries = items.map((item) =>
-      cartItemToShufersalCartItemAdd(item),
-    );
-    await this.apiRequest({
+  async addToCart(items: CartItemToAdd[]): Promise<CartMutationResult> {
+    return this.cartRequest({
       method: 'POST',
       path: '/cart/addGrid',
-      body: shufersalCartEntries,
+      body: items.map(cartItemToShufersalCartItemAdd),
     });
+  }
+
+  async setCartItemQuantities(
+    items: CartItemToAdd[],
+  ): Promise<CartMutationResult> {
+    const itemsToSet = items.filter((item) => item.quantity > 0);
+    const productCodesToRemove = items
+      .filter((item) => item.quantity <= 0)
+      .map((item) => item.productCode);
+
+    let result =
+      itemsToSet.length > 0
+        ? await this.addToCart(itemsToSet)
+        : await this.getCartState().then((state) => ({
+            ...state,
+            modifications: [],
+          }));
+    const modifications = [...result.modifications];
+
+    for (const productCode of productCodesToRemove) {
+      const cartItem = result.items.find(
+        (item) => item.productCode === productCode,
+      );
+      if (!cartItem) {
+        continue;
+      }
+      result = await this.removeFromCart(productCode, {
+        entryNumber: cartItem.entryNumber,
+      });
+      modifications.push(...result.modifications);
+    }
+
+    return { ...result, modifications };
   }
 
   async updateCartItemQuantity(
     productCode: string,
     quantity: number,
-  ): Promise<void> {
-    const cartItems = await this.getCartItems();
-    const cartItem = cartItems.find((item) => item.productCode === productCode);
-
-    if (!cartItem) {
-      throw new Error(`Product ${productCode} not found in cart`);
+    options?: CartEntryOptions,
+  ): Promise<CartMutationResult> {
+    let entryNumber = options?.entryNumber;
+    if (entryNumber === undefined) {
+      const cartItems = await this.getCartItems();
+      const cartItem = cartItems.find(
+        (item) => item.productCode === productCode,
+      );
+      if (!cartItem) {
+        throw new Error(`Product ${productCode} not found in cart`);
+      }
+      entryNumber = cartItem.entryNumber;
     }
 
     const query = new URLSearchParams({
-      entryNumber: cartItem.entryNumber.toString(),
+      entryNumber: entryNumber.toString(),
       qty: quantity.toString(),
       'cartContext[openFrom]': 'CART',
       'cartContext[recommendationType]': 'REGULAR',
@@ -604,15 +685,18 @@ export class ShufersalSession {
       query.set('cartContext[action]', 'remove');
     }
 
-    await this.apiRequest({
+    return this.cartRequest({
       method: 'POST',
       path: `/cart/update?${query.toString()}`,
       body: { quantity },
     });
   }
 
-  async removeFromCart(productCode: string): Promise<void> {
-    await this.updateCartItemQuantity(productCode, 0);
+  async removeFromCart(
+    productCode: string,
+    options?: CartEntryOptions,
+  ): Promise<CartMutationResult> {
+    return this.updateCartItemQuantity(productCode, 0, options);
   }
 
   async clearCart(): Promise<void> {
@@ -622,53 +706,17 @@ export class ShufersalSession {
     });
   }
 
-  async getCartItems(): Promise<ExistingCartItem[]> {
-    const result = await this.page.evaluate(async (url) => {
-      const response = await fetch(url, {
-        method: 'GET',
-        mode: 'cors',
-        credentials: 'include',
-      });
-      if (!response.ok) {
-        throw new Error(
-          `Request failed with status ${String(response.status)}`,
-        );
-      }
-      const html = await response.text();
-
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(html, 'text/html');
-
-      const cartElements = doc.querySelectorAll('article[data-product-code]');
-      const cartItems = Array.from(cartElements).map((el) => {
-        const productCode = el.getAttribute('data-product-code') || '';
-        const quantity = parseFloat(el.getAttribute('data-entry-qty') || '0');
-        const entryNumber = parseInt(
-          el.getAttribute('data-entry-number') || '0',
-          10,
-        );
-        const isOutOfStock = el.classList.contains(
-          'miglog-cart-prod-notInStock',
-        );
-        const priceEl = el.querySelector('.miglog-prod-totalPrize');
-        const priceText = (priceEl?.textContent ?? '').trim() || '0';
-        const itemPrice = parseFloat(priceText.replace(/[^\d.]/g, '')) || 0;
-        return { productCode, quantity, entryNumber, itemPrice, isOutOfStock };
-      });
-
-      return { cartItems };
-    }, `${WEBAPP_URL}/cart/load?restoreCart=true`);
-
-    return result.cartItems.map((item) => {
-      return {
-        entryNumber: item.entryNumber,
-        productCode: item.productCode,
-        quantity: item.quantity,
-        itemPrice: item.itemPrice,
-        inStock: !item.isOutOfStock,
-        rawData: item,
-      };
+  async getCartState(): Promise<CartState> {
+    const { items, orderInUpdateMode } = await this.cartRequest({
+      method: 'GET',
+      path: CART_PATH,
     });
+    return { items, orderInUpdateMode };
+  }
+
+  async getCartItems(): Promise<ExistingCartItem[]> {
+    const { items } = await this.getCartState();
+    return items;
   }
 
   async getAvailableTimeSlots(): Promise<DeliveryTimeSlot[]> {
@@ -697,13 +745,20 @@ export class ShufersalSession {
     return shufersalTimeSlotToDeliveryTimeSlot(shufersalTimeSlot);
   }
 
-  async selectTimeSlot(timeSlotCode: string): Promise<void> {
-    const availableTimeSlots = await this.getAvailableTimeSlots();
-    const timeSlot = availableTimeSlots.find(
-      (slot) => slot.code === timeSlotCode,
-    );
-    if (!timeSlot) {
-      throw new Error(`Time slot ${timeSlotCode} not found`);
+  async selectTimeSlot(
+    timeSlotOrCode: string | DeliveryTimeSlot,
+  ): Promise<void> {
+    let timeSlot: DeliveryTimeSlot | undefined;
+    if (typeof timeSlotOrCode === 'string') {
+      const availableTimeSlots = await this.getAvailableTimeSlots();
+      timeSlot = availableTimeSlots.find(
+        (slot) => slot.code === timeSlotOrCode,
+      );
+      if (!timeSlot) {
+        throw new Error(`Time slot ${timeSlotOrCode} not found`);
+      }
+    } else {
+      timeSlot = timeSlotOrCode;
     }
     await this.apiRequest({
       method: 'POST',
@@ -715,31 +770,47 @@ export class ShufersalSession {
   }
 
   async createOrder(removeMissingItems: boolean): Promise<OrderInfo> {
-    const selectedTimeSlot = await this.getSelectedTimeSlot();
-    if (!selectedTimeSlot) {
-      throw new Error('No time slot selected before creating order');
-    }
-
-    const cartItems = await this.getCartItems();
-    const missingItems = cartItems.filter((item) => !item.inStock);
-    if (missingItems.length > 0) {
-      if (removeMissingItems) {
-        for (const item of missingItems) {
-          await this.removeFromCart(item.productCode);
-        }
-      } else {
-        throw new Error(
-          `Missing items in cart: ${missingItems
-            .map((item) => item.productCode)
-            .join(', ')}`,
-        );
-      }
-    }
-
     console.info('createOrder: Authenticating checkout');
     const checkoutConfig = await this.authenticateCheckout();
 
-    await this.apiRequest({ method: 'GET', path: '/checkout/composed' });
+    let checkout = await this.getComposedCheckout();
+    const timeSlotStartTime =
+      checkout.directCart.consignments?.[0]?.timeSlotStartTime;
+    if (!timeSlotStartTime) {
+      throw new Error('No time slot selected before creating order');
+    }
+
+    const missingEntries = checkout.directCart.entries.filter(
+      isCheckoutEntryOutOfStock,
+    );
+    if (missingEntries.length > 0) {
+      const missingProductCodes = missingEntries.map(
+        (entry) => entry.product.code,
+      );
+      if (!removeMissingItems) {
+        throw new Error(
+          `Missing items in cart: ${missingProductCodes.join(', ')}`,
+        );
+      }
+      console.info(
+        `createOrder: Removing ${String(missingProductCodes.length)} out-of-stock items`,
+      );
+      let entries = checkout.directCart.entries.map((entry) => ({
+        productCode: entry.product.code,
+        entryNumber: entry.entryNumber,
+      }));
+      for (const productCode of missingProductCodes) {
+        const entry = entries.find((e) => e.productCode === productCode);
+        if (!entry) {
+          continue;
+        }
+        const { items } = await this.removeFromCart(productCode, {
+          entryNumber: entry.entryNumber,
+        });
+        entries = items;
+      }
+      checkout = await this.getComposedCheckout();
+    }
 
     const requiresAgeVerification = await this.apiRequest<boolean>({
       method: 'GET',
@@ -764,19 +835,32 @@ export class ShufersalSession {
     const confirmationPath = getOrderConfirmationPath(response);
     console.info('createOrder: Order placed successfully');
 
-    await this.page.goto(`${WEBAPP_URL}${confirmationPath}`, {
-      waitUntil: 'domcontentloaded',
-      timeout: NAVIGATION_TIMEOUT,
-    });
+    const orderCode = parseOrderCodeFromRedirect(confirmationPath);
+    if (orderCode) {
+      const orderDetails = await this.apiRequest<ShufersalOrderDetails>({
+        method: 'GET',
+        path: `/my-account/orders/${orderCode}`,
+      });
+      if (orderDetails) {
+        return shufersalAccountOrderToOrderInfo(orderDetails);
+      }
+      console.warn(
+        `createOrder: Could not load order ${orderCode}, falling back to the order list`,
+      );
+    } else {
+      console.warn(
+        `createOrder: Could not parse order code from ${confirmationPath}, falling back to the order list`,
+      );
+    }
 
-    console.info('createOrder: Fetching orders to find newly created order');
+    const deliveryDateTime = new Date(timeSlotStartTime).toISOString();
     const accountOrders = await this.getOrders();
     const matchingOrder = accountOrders.activeOrders.find(
-      (order) => order.deliveryDateTime === selectedTimeSlot.dateTime,
+      (order) => order.deliveryDateTime === deliveryDateTime,
     );
     if (!matchingOrder) {
       throw new Error(
-        `No active order found with delivery time ${selectedTimeSlot.dateTime} after creating order`,
+        `No active order found with delivery time ${deliveryDateTime} after creating order`,
       );
     }
     return matchingOrder;
@@ -790,25 +874,8 @@ export class ShufersalSession {
   }
 
   async getOrderInUpdateMode(): Promise<string | null> {
-    const textContent = await this.page.evaluate(async (url) => {
-      const response = await fetch(url, {
-        method: 'GET',
-        mode: 'cors',
-        credentials: 'include',
-      });
-      if (!response.ok) {
-        throw new Error(
-          `Request failed with status ${String(response.status)}`,
-        );
-      }
-      const html = await response.text();
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(html, 'text/html');
-      return doc.body.textContent || '';
-    }, `${WEBAPP_URL}/cart/load?restoreCart=true`);
-
-    const match = textContent.match(/עדכון הזמנה מס׳ (\d+)/);
-    return match ? match[1] : null;
+    const { orderInUpdateMode } = await this.getCartState();
+    return orderInUpdateMode;
   }
 
   async sendReceipt(orderNumber: string, email: string): Promise<void> {
@@ -1102,7 +1169,7 @@ export class ShufersalSession {
         const doc = new DOMParser().parseFromString(html, 'text/html');
         return {
           url: response.url,
-          csrfTokenRefreshed: !!csrfToken,
+          csrfToken,
           threeDSecureEnabled: html.match(
             /miglog\.threeDSecure\.enabled\s*=\s*(true|false)/,
           )?.[1],
@@ -1123,9 +1190,10 @@ export class ShufersalSession {
         `Checkout authentication ended on unexpected page: ${checkoutPage.url}`,
       );
     }
-    if (!checkoutPage.csrfTokenRefreshed) {
+    if (!checkoutPage.csrfToken) {
       throw new Error('Checkout page did not include a CSRF token');
     }
+    this.csrfToken = checkoutPage.csrfToken;
 
     return {
       threeDSecureEnabled:
@@ -1176,100 +1244,198 @@ export class ShufersalSession {
     return encodeURIComponent(hash);
   }
 
-  private async getCSRFToken(): Promise<string> {
-    await this.page.waitForFunction(() => window.ACC?.config?.CSRFToken, {
-      timeout: 10000,
+  private async getComposedCheckout(): Promise<ShufersalComposedCheckout> {
+    const checkout = await this.apiRequest<ShufersalComposedCheckout>({
+      method: 'GET',
+      path: '/checkout/composed',
     });
-    const token = await this.page.evaluate(() => window.ACC?.config?.CSRFToken);
+    if (!checkout?.directCart) {
+      throw new Error('Failed to load checkout details');
+    }
+    return checkout;
+  }
+
+  private async getCSRFToken(): Promise<string> {
+    if (this.csrfToken) {
+      return this.csrfToken;
+    }
+    const handle = await this.page.waitForFunction(
+      () => window.ACC?.config?.CSRFToken,
+      { timeout: 10000 },
+    );
+    const token = await handle.jsonValue();
+    await handle.dispose();
     if (!token) {
       throw new Error('CSRFToken not found');
     }
+    this.csrfToken = token;
     return token;
   }
 
   private async apiRequest<T extends object | boolean | undefined>(
     config: ApiRequestConfig,
-  ) {
-    const { method, path, body, form } = config;
-    const csrfToken = method === 'POST' ? await this.getCSRFToken() : undefined;
+  ): Promise<T | undefined> {
+    return (await this.sendRequest(config, 'json')) as T | undefined;
+  }
 
-    const makeRequest = async (): Promise<T | undefined> => {
-      const data = await this.page.evaluate(
-        async (url, method, body, form, csrfToken) => {
-          const headers: Record<string, string> = {
-            'content-type': form
-              ? 'application/x-www-form-urlencoded; charset=UTF-8'
-              : 'application/json',
-          };
-
-          if (csrfToken) {
-            headers['csrftoken'] = csrfToken;
-          }
-
-          let requestBody: string | undefined;
-          if (form) {
-            requestBody = new URLSearchParams(form).toString();
-          } else if (body) {
-            requestBody = JSON.stringify(body);
-          }
-
-          const response = await fetch(url, {
-            headers,
-            method,
-            body: requestBody,
-            mode: 'cors',
-            credentials: 'include',
-            redirect: 'manual',
-          });
-
-          if (
-            response.type === 'opaqueredirect' ||
-            (response.status >= 300 && response.status < 400)
-          ) {
-            const location = response.headers.get('location');
-            if (location?.includes('/login')) {
-              throw new Error('REDIRECT_TO_LOGIN');
-            }
-          }
-
-          if (!response.ok) {
-            let errorBody = '';
-            try {
-              const contentType = response.headers.get('content-type');
-              if (contentType?.includes('application/json')) {
-                errorBody = JSON.stringify(await response.json());
-              } else {
-                const text = await response.text();
-                if (contentType?.includes('text/html') && text.length > 500) {
-                  errorBody =
-                    text.substring(0, 500) + '... (HTML response truncated)';
-                } else {
-                  errorBody = text;
-                }
-              }
-            } catch {
-              errorBody = 'Failed to read error response body';
-            }
-
-            throw new Error(
-              `Request failed: ${method} ${url} -> ${String(response.status)} ${response.statusText}. Response: ${errorBody}`,
-            );
-          }
-
-          if (
-            response.headers.get('content-type')?.includes('application/json')
-          ) {
-            return (await response.json()) as T;
-          }
-          return undefined;
-        },
-        `${WEBAPP_URL}${path}`,
-        method,
-        body,
-        form,
-        csrfToken,
+  private async cartRequest(
+    config: ApiRequestConfig,
+  ): Promise<CartMutationResult> {
+    const cartPage = (await this.sendRequest(config, 'cart')) as
+      | RawCartPage
+      | undefined;
+    if (!cartPage) {
+      throw new Error(
+        `Expected cart HTML from ${config.method} ${config.path.split('?')[0]}`,
       );
-      return data as T | undefined;
+    }
+    return rawCartPageToCartMutationResult(cartPage);
+  }
+
+  private async sendRequest(
+    config: ApiRequestConfig,
+    responseFormat: ResponseFormat,
+  ): Promise<unknown> {
+    const { method, path, body, form } = config;
+
+    const makeRequest = async (): Promise<unknown> => {
+      const csrfToken =
+        method === 'POST' ? await this.getCSRFToken() : undefined;
+      const startTime = performance.now();
+      let status: number | undefined;
+      try {
+        const result = await this.page.evaluate(
+          async (url, method, body, form, csrfToken, responseFormat) => {
+            const headers: Record<string, string> = {
+              'content-type': form
+                ? 'application/x-www-form-urlencoded; charset=UTF-8'
+                : 'application/json',
+            };
+
+            if (csrfToken) {
+              headers['csrftoken'] = csrfToken;
+            }
+
+            let requestBody: string | undefined;
+            if (form) {
+              requestBody = new URLSearchParams(form).toString();
+            } else if (body) {
+              requestBody = JSON.stringify(body);
+            }
+
+            const response = await fetch(url, {
+              headers,
+              method,
+              body: requestBody,
+              mode: 'cors',
+              credentials: 'include',
+              redirect: 'manual',
+            });
+
+            if (
+              response.type === 'opaqueredirect' ||
+              (response.status >= 300 && response.status < 400)
+            ) {
+              const location = response.headers.get('location');
+              if (location?.includes('/login')) {
+                throw new Error('REDIRECT_TO_LOGIN');
+              }
+            }
+
+            if (!response.ok) {
+              let errorBody = '';
+              try {
+                const contentType = response.headers.get('content-type');
+                if (contentType?.includes('application/json')) {
+                  errorBody = JSON.stringify(await response.json());
+                } else {
+                  const text = await response.text();
+                  if (contentType?.includes('text/html') && text.length > 500) {
+                    errorBody =
+                      text.substring(0, 500) + '... (HTML response truncated)';
+                  } else {
+                    errorBody = text;
+                  }
+                }
+              } catch {
+                errorBody = 'Failed to read error response body';
+              }
+
+              throw new Error(
+                `Request failed: ${method} ${url} -> ${String(response.status)} ${response.statusText}. Response: ${errorBody}`,
+              );
+            }
+
+            const contentType = response.headers.get('content-type') ?? '';
+
+            if (responseFormat === 'cart') {
+              if (!contentType.includes('text/html')) {
+                return { status: response.status, data: undefined };
+              }
+              const doc = new DOMParser().parseFromString(
+                await response.text(),
+                'text/html',
+              );
+              const articles = Array.from(
+                doc.querySelectorAll('article[data-product-code]'),
+              ).map((el) => {
+                const priceText =
+                  (
+                    el.querySelector('.miglog-prod-totalPrize')?.textContent ??
+                    ''
+                  ).trim() || '0';
+                return {
+                  productCode: el.getAttribute('data-product-code') ?? '',
+                  quantity: parseFloat(
+                    el.getAttribute('data-entry-qty') ?? '0',
+                  ),
+                  entryNumber: parseInt(
+                    el.getAttribute('data-entry-number') ?? '0',
+                    10,
+                  ),
+                  itemPrice: parseFloat(priceText.replace(/[^\d.]/g, '')) || 0,
+                  isOutOfStock: el.classList.contains(
+                    'miglog-cart-prod-notInStock',
+                  ),
+                };
+              });
+              const modificationsScript =
+                Array.from(doc.querySelectorAll('script'))
+                  .map((script) => script.textContent)
+                  .find((text) => text.includes('miglog.cart.modifications')) ??
+                null;
+              return {
+                status: response.status,
+                data: {
+                  articles,
+                  bodyText: doc.body.textContent,
+                  modificationsScript,
+                },
+              };
+            }
+
+            if (contentType.includes('application/json')) {
+              return {
+                status: response.status,
+                data: (await response.json()) as unknown,
+              };
+            }
+            return { status: response.status, data: undefined };
+          },
+          `${WEBAPP_URL}${path}`,
+          method,
+          body,
+          form,
+          csrfToken,
+          responseFormat,
+        );
+        status = result.status;
+        return result.data;
+      } finally {
+        console.debug(
+          `[shufersal] ${method} ${path.split('?')[0]} ${status === undefined ? 'failed' : String(status)} ${String(Math.round(performance.now() - startTime))}ms`,
+        );
+      }
     };
 
     try {
@@ -1387,19 +1553,22 @@ export class ShufersalBot {
     const context = session.browserContext;
     const page = session.browserPage;
 
-    for (const cookie of sessionData.cookies as Array<
-      Parameters<BrowserContext['setCookie']>[0]
-    >) {
-      await context.setCookie(cookie);
-    }
+    await context.setCookie(
+      ...(sessionData.cookies as Parameters<BrowserContext['setCookie']>),
+    );
 
     await page.goto(`${WEBAPP_URL}/wish-lists/main`, {
       waitUntil: 'domcontentloaded',
       timeout: NAVIGATION_TIMEOUT,
     });
 
-    await page.waitForSelector('.title-notAnonymous', {
-      timeout: LOGIN_VERIFICATION_TIMEOUT,
-    });
+    const isLoggedIn =
+      !page.url().includes('/login') &&
+      (await page.evaluate(
+        () => document.querySelector('.title-notAnonymous') !== null,
+      ));
+    if (!isLoggedIn) {
+      throw new SessionExpiredError();
+    }
   }
 }
