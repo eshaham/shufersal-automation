@@ -20,9 +20,11 @@ import {
   ShufersalAvailableTimeSlotsResponse,
   ShufersalBase,
   ShufersalCartItemAdd,
+  ShufersalCheckoutAuthResponse,
   ShufersalOrder,
   ShufersalOrderDetails,
   ShufersalOrderEntry,
+  ShufersalPlaceOrderResponse,
   ShufersalProduct,
   ShufersalProductImage,
   ShufersalProductSearchResponse,
@@ -78,6 +80,15 @@ declare global {
     ACC?: {
       config?: {
         CSRFToken?: string;
+      };
+    };
+    PayMe?: {
+      clientData: (isTestMode: boolean) => Promise<{ hash?: string }>;
+    };
+    miglog?: {
+      threeDSecure?: {
+        enabled?: boolean;
+        isTestMode?: boolean;
       };
     };
   }
@@ -340,10 +351,37 @@ function cartItemToShufersalCartItemAdd(
   };
 }
 
+function getOrderConfirmationPath(
+  response: ShufersalPlaceOrderResponse | undefined,
+): string {
+  if (!response) {
+    throw new Error('Order placement failed: empty response');
+  }
+  if (Array.isArray(response)) {
+    const errors = response
+      .map((error) => error.errorCode ?? error.code ?? error.type ?? 'unknown')
+      .join(', ');
+    throw new Error(`Order placement failed: ${errors}`);
+  }
+  if (response.success && response.redirect) {
+    return response.redirect;
+  }
+  if (response.allocationTimeout) {
+    throw new Error('Order placement failed: allocation timeout');
+  }
+  if (response.otherCreditCard3DSLink || response.directCreditCard3DSLink) {
+    throw new Error(
+      'Order placement failed: credit card requires 3D Secure verification',
+    );
+  }
+  throw new Error(`Order placement failed: ${JSON.stringify(response)}`);
+}
+
 interface ApiRequestConfig {
   method: 'GET' | 'POST';
   path: string;
   body?: unknown;
+  form?: Record<string, string>;
 }
 
 export class ShufersalSession {
@@ -409,6 +447,12 @@ export class ShufersalSession {
     if (errorModalOrNavigation === null) {
       throw new LoginTimeoutError();
     }
+
+    // POST requests sent from the page rendered right after login fail with 405 until it is reloaded
+    await this.page.reload({
+      waitUntil: 'domcontentloaded',
+      timeout: NAVIGATION_TIMEOUT,
+    });
   }
 
   async searchProducts(
@@ -693,134 +737,38 @@ export class ShufersalSession {
       }
     }
 
-    console.info('createOrder: Navigating to cart summary');
-    await this.page.goto(`${WEBAPP_URL}/cart/cartsummary`);
+    console.info('createOrder: Authenticating checkout');
+    await this.authenticateCheckout();
 
-    await this.page.waitForSelector('.miglog-cart-summary-checkoutLink', {
-      timeout: 60_000,
-      visible: true,
+    await this.apiRequest({ method: 'GET', path: '/checkout/composed' });
+
+    const requiresAgeVerification = await this.apiRequest<boolean>({
+      method: 'GET',
+      path: '/checkout/adultCheck/shouldCheckIfAdult',
     });
-    console.info('createOrder: Starting checkout flow');
-    await this.page.click('.miglog-cart-summary-checkoutLink');
-
-    const giftModal = await this.page
-      .waitForSelector('.giftProductsModal', {
-        visible: true,
-        timeout: ACTION_TIMEOUT,
-      })
-      .catch(() => null);
-
-    if (giftModal) {
-      console.info('createOrder: Dismissing gift selection modal');
-      const buttonClicked = await this.page.evaluate(() => {
-        const closeButton = document.querySelector<HTMLElement>(
-          '.giftProductsModal .modal-header .btnClose',
-        );
-        if (closeButton) {
-          closeButton.click();
-          return true;
-        }
-        return false;
-      });
-      if (!buttonClicked) {
-        throw new Error('Failed to find gift modal close button');
-      }
-      await this.page.click('.miglog-cart-summary-checkoutLink');
-    }
-
-    await this.page.waitForSelector('#j_password', {
-      visible: true,
-      timeout: 60_000,
-    });
-    await this.page.type('#j_password', this.credentials.password, {
-      delay: 100,
-    });
-
-    console.info('createOrder: Submitting password');
-    await this.page.click('#checkoutPwd button[type="submit"]');
-
-    const passwordResult = await Promise.race([
-      this.page
-        .waitForFunction(
-          () => !window.location.href.includes('/cart/cartsummary'),
-          { timeout: NAVIGATION_TIMEOUT },
-        )
-        .then(() => 'navigation' as const)
-        .catch(() => null),
-      this.page
-        .waitForSelector(
-          '#checkoutPwd .field-validation-error, .confirmPassword .globalMessage',
-          {
-            visible: true,
-            timeout: NAVIGATION_TIMEOUT,
-          },
-        )
-        .then(() => 'error' as const)
-        .catch(() => null),
-    ]);
-
-    if (passwordResult === 'error') {
-      throw new Error('Checkout password verification failed');
-    }
-
-    if (passwordResult === null) {
-      throw new Error('Checkout password verification timed out');
-    }
-    console.info('createOrder: Password navigation completed');
-
-    const missingProductsModal = await this.page
-      .waitForSelector('#missingProducts', {
-        visible: true,
-        timeout: ACTION_TIMEOUT,
-      })
-      .catch(() => null);
-
-    if (missingProductsModal) {
-      console.info('createOrder: Dismissing missing products modal');
-      await this.page.click('#missingProducts .bottomContainer button');
-      await this.page.waitForSelector('#missingProducts', {
-        hidden: true,
-        timeout: ACTION_TIMEOUT,
+    if (requiresAgeVerification) {
+      console.info('createOrder: Confirming age for restricted items');
+      await this.apiRequest({
+        method: 'POST',
+        path: '/checkout/adultCheck/setAdultsOnlyAllowed',
+        form: { load: 'true' },
       });
     }
 
-    const over18Checkbox = await this.page
-      .waitForSelector('.over-18 .checkboxPic', {
-        visible: true,
-        timeout: 5_000,
-      })
-      .catch(() => null);
+    const jwtPayme = await this.getPaymeClientHash();
 
-    if (over18Checkbox) {
-      console.info(
-        'createOrder: Accepting over-18 checkbox for alcohol/restricted items',
-      );
-      await this.page.click('.over-18 .checkboxPic');
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-    }
+    console.info('createOrder: Placing order');
+    const response = await this.apiRequest<ShufersalPlaceOrderResponse>({
+      method: 'GET',
+      path: `/checkout/placeOrder?jwtPayme=${jwtPayme}&after3ds=false`,
+    });
+    const confirmationPath = getOrderConfirmationPath(response);
+    console.info('createOrder: Order placed successfully');
 
-    console.info('createOrder: Waiting for confirm button');
-    await this.page.waitForSelector('.btnConfirm', {
-      visible: true,
+    await this.page.goto(`${WEBAPP_URL}${confirmationPath}`, {
+      waitUntil: 'domcontentloaded',
       timeout: NAVIGATION_TIMEOUT,
     });
-
-    console.info('createOrder: Confirming order');
-    await Promise.all([
-      this.page.waitForNavigation({
-        waitUntil: 'domcontentloaded',
-        timeout: NAVIGATION_TIMEOUT,
-      }),
-      this.page.click('.btnConfirm'),
-    ]);
-    console.info('createOrder: Order confirmed successfully');
-
-    console.info('createOrder: Waiting for confirmation page to load');
-    await this.page.waitForSelector('.orderFunctions .view', {
-      visible: true,
-      timeout: 10_000,
-    });
-    console.info('createOrder: Confirmation page loaded');
 
     console.info('createOrder: Fetching orders to find newly created order');
     const accountOrders = await this.getOrders();
@@ -1069,6 +1017,128 @@ export class ShufersalSession {
     }
   }
 
+  private async authenticateCheckout(): Promise<void> {
+    const authForm = await this.page.evaluate(async (url) => {
+      const response = await fetch(url, { credentials: 'include' });
+      if (!response.ok) {
+        throw new Error(
+          `Failed to load checkout password form: ${String(response.status)}`,
+        );
+      }
+      const doc = new DOMParser().parseFromString(
+        await response.text(),
+        'text/html',
+      );
+      const form = doc.querySelector('form#checkoutPwd');
+      if (!form) {
+        return null;
+      }
+      const fields: Record<string, string> = {};
+      form.querySelectorAll('input').forEach((input) => {
+        if (input.name) {
+          fields[input.name] = input.value;
+        }
+      });
+      return {
+        fields,
+        verifyPath: form.getAttribute('action'),
+        submitPath: form.getAttribute('data-action2'),
+      };
+    }, `${WEBAPP_URL}/cart/checkout/auth?redirect_url=%2Fcheckout&checkout_flow=true`);
+
+    if (!authForm?.verifyPath || !authForm.submitPath) {
+      throw new Error('Checkout password form not found');
+    }
+    if (authForm.fields['strongAuth'] === 'true') {
+      throw new Error('Checkout requires OTP verification');
+    }
+
+    const fields = {
+      ...authForm.fields,
+      j_password: this.credentials.password,
+    };
+
+    const verification = await this.page.evaluate(
+      async (url, fields) => {
+        const response = await fetch(url, {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
+            'x-requested-with': 'XMLHttpRequest',
+          },
+          body: new URLSearchParams(fields).toString(),
+        });
+        if (!response.ok) {
+          throw new Error(
+            `Checkout password verification failed with status ${String(response.status)}`,
+          );
+        }
+        return (await response.json()) as ShufersalCheckoutAuthResponse;
+      },
+      `${BASE_URL}${authForm.verifyPath}`,
+      fields,
+    );
+    if (!verification.success) {
+      throw new Error(
+        `Checkout password verification failed: ${verification.message ?? 'unknown reason'}`,
+      );
+    }
+
+    await Promise.all([
+      this.page.waitForNavigation({
+        waitUntil: 'domcontentloaded',
+        timeout: NAVIGATION_TIMEOUT,
+      }),
+      this.page.evaluate(
+        (url, fields) => {
+          const form = document.createElement('form');
+          form.method = 'post';
+          form.action = url;
+          for (const [name, value] of Object.entries(fields)) {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = name;
+            input.value = value;
+            form.appendChild(input);
+          }
+          document.body.appendChild(form);
+          form.submit();
+        },
+        `${BASE_URL}${authForm.submitPath}`,
+        fields,
+      ),
+    ]);
+
+    if (!this.page.url().includes('/miglog-checkout')) {
+      throw new Error(
+        `Checkout authentication ended on unexpected page: ${this.page.url()}`,
+      );
+    }
+  }
+
+  private async getPaymeClientHash(): Promise<string> {
+    const threeDSecure = await this.page.evaluate(
+      () => window.miglog?.threeDSecure ?? null,
+    );
+    if (!threeDSecure?.enabled) {
+      return '';
+    }
+
+    await this.page.waitForFunction(
+      () => typeof window.PayMe?.clientData === 'function',
+      { timeout: ACTION_TIMEOUT },
+    );
+    const hash = await this.page.evaluate(async (isTestMode) => {
+      const data = await window.PayMe?.clientData(isTestMode);
+      return data?.hash ?? '';
+    }, threeDSecure.isTestMode ?? false);
+    if (!hash) {
+      console.warn('createOrder: PayMe client hash is empty');
+    }
+    return encodeURIComponent(hash);
+  }
+
   private async getCSRFToken(): Promise<string> {
     await this.page.waitForFunction(() => window.ACC?.config?.CSRFToken, {
       timeout: 10000,
@@ -1080,27 +1150,36 @@ export class ShufersalSession {
     return token;
   }
 
-  private async apiRequest<T extends object | undefined>(
+  private async apiRequest<T extends object | boolean | undefined>(
     config: ApiRequestConfig,
   ) {
-    const { method, path, body } = config;
+    const { method, path, body, form } = config;
     const csrfToken = method === 'POST' ? await this.getCSRFToken() : undefined;
 
     const makeRequest = async (): Promise<T | undefined> => {
       const data = await this.page.evaluate(
-        async (url, method, body, csrfToken) => {
+        async (url, method, body, form, csrfToken) => {
           const headers: Record<string, string> = {
-            'content-type': 'application/json',
+            'content-type': form
+              ? 'application/x-www-form-urlencoded; charset=UTF-8'
+              : 'application/json',
           };
 
           if (csrfToken) {
             headers['csrftoken'] = csrfToken;
           }
 
+          let requestBody: string | undefined;
+          if (form) {
+            requestBody = new URLSearchParams(form).toString();
+          } else if (body) {
+            requestBody = JSON.stringify(body);
+          }
+
           const response = await fetch(url, {
             headers,
             method,
-            body: body ? JSON.stringify(body) : undefined,
+            body: requestBody,
             mode: 'cors',
             credentials: 'include',
             redirect: 'manual',
@@ -1150,6 +1229,7 @@ export class ShufersalSession {
         `${WEBAPP_URL}${path}`,
         method,
         body,
+        form,
         csrfToken,
       );
       return data as T | undefined;
