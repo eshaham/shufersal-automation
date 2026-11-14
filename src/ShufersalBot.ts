@@ -85,12 +85,6 @@ declare global {
     PayMe?: {
       clientData: (isTestMode: boolean) => Promise<{ hash?: string }>;
     };
-    miglog?: {
-      threeDSecure?: {
-        enabled?: boolean;
-        isTestMode?: boolean;
-      };
-    };
   }
 }
 
@@ -98,7 +92,6 @@ export const BASE_URL = 'https://www.shufersal.co.il';
 export const WEBAPP_URL = `${BASE_URL}/online/he`;
 
 const NAVIGATION_TIMEOUT = 30_000;
-const ACTION_TIMEOUT = 10_000;
 const LOGIN_VERIFICATION_TIMEOUT = 60_000;
 
 function stripCategoryCodePrefix(
@@ -375,6 +368,12 @@ function getOrderConfirmationPath(
     );
   }
   throw new Error(`Order placement failed: ${JSON.stringify(response)}`);
+}
+
+interface CheckoutConfig {
+  threeDSecureEnabled: boolean;
+  threeDSecureTestMode: boolean;
+  paymeScriptUrls: string[];
 }
 
 interface ApiRequestConfig {
@@ -738,7 +737,7 @@ export class ShufersalSession {
     }
 
     console.info('createOrder: Authenticating checkout');
-    await this.authenticateCheckout();
+    const checkoutConfig = await this.authenticateCheckout();
 
     await this.apiRequest({ method: 'GET', path: '/checkout/composed' });
 
@@ -755,7 +754,7 @@ export class ShufersalSession {
       });
     }
 
-    const jwtPayme = await this.getPaymeClientHash();
+    const jwtPayme = await this.getPaymeClientHash(checkoutConfig);
 
     console.info('createOrder: Placing order');
     const response = await this.apiRequest<ShufersalPlaceOrderResponse>({
@@ -1017,7 +1016,7 @@ export class ShufersalSession {
     }
   }
 
-  private async authenticateCheckout(): Promise<void> {
+  private async authenticateCheckout(): Promise<CheckoutConfig> {
     const authForm = await this.page.evaluate(async (url) => {
       const response = await fetch(url, { credentials: 'include' });
       if (!response.ok) {
@@ -1085,54 +1084,92 @@ export class ShufersalSession {
       );
     }
 
-    await Promise.all([
-      this.page.waitForNavigation({
-        waitUntil: 'domcontentloaded',
-        timeout: NAVIGATION_TIMEOUT,
-      }),
-      this.page.evaluate(
-        (url, fields) => {
-          const form = document.createElement('form');
-          form.method = 'post';
-          form.action = url;
-          for (const [name, value] of Object.entries(fields)) {
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = name;
-            input.value = value;
-            form.appendChild(input);
-          }
-          document.body.appendChild(form);
-          form.submit();
-        },
-        `${BASE_URL}${authForm.submitPath}`,
-        fields,
-      ),
-    ]);
+    const checkoutPage = await this.page.evaluate(
+      async (url, fields) => {
+        const response = await fetch(url, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'content-type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams(fields).toString(),
+        });
+        const html = await response.text();
+        const csrfToken = html.match(
+          /CSRFToken\s*[:=]\s*["']([^"']+)["']/,
+        )?.[1];
+        if (csrfToken && window.ACC?.config) {
+          window.ACC.config.CSRFToken = csrfToken;
+        }
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        return {
+          url: response.url,
+          csrfTokenRefreshed: !!csrfToken,
+          threeDSecureEnabled: html.match(
+            /miglog\.threeDSecure\.enabled\s*=\s*(true|false)/,
+          )?.[1],
+          threeDSecureTestMode: html.match(
+            /miglog\.threeDSecure\.isTestMode\s*=\s*(true|false)/,
+          )?.[1],
+          paymeScriptUrls: Array.from(doc.querySelectorAll('script[src]'))
+            .map((script) => script.getAttribute('src') ?? '')
+            .filter((src) => src.includes('paymeservice.com')),
+        };
+      },
+      `${BASE_URL}${authForm.submitPath}`,
+      fields,
+    );
 
-    if (!this.page.url().includes('/miglog-checkout')) {
+    if (!checkoutPage.url.includes('/miglog-checkout')) {
       throw new Error(
-        `Checkout authentication ended on unexpected page: ${this.page.url()}`,
+        `Checkout authentication ended on unexpected page: ${checkoutPage.url}`,
       );
     }
-  }
-
-  private async getPaymeClientHash(): Promise<string> {
-    const threeDSecure = await this.page.evaluate(
-      () => window.miglog?.threeDSecure ?? null,
-    );
-    if (!threeDSecure?.enabled) {
-      return '';
+    if (!checkoutPage.csrfTokenRefreshed) {
+      throw new Error('Checkout page did not include a CSRF token');
     }
 
-    await this.page.waitForFunction(
-      () => typeof window.PayMe?.clientData === 'function',
-      { timeout: ACTION_TIMEOUT },
+    return {
+      threeDSecureEnabled:
+        checkoutPage.threeDSecureEnabled === undefined
+          ? checkoutPage.paymeScriptUrls.length > 0
+          : checkoutPage.threeDSecureEnabled === 'true',
+      threeDSecureTestMode: checkoutPage.threeDSecureTestMode === 'true',
+      paymeScriptUrls: checkoutPage.paymeScriptUrls,
+    };
+  }
+
+  private async getPaymeClientHash(
+    checkoutConfig: CheckoutConfig,
+  ): Promise<string> {
+    if (!checkoutConfig.threeDSecureEnabled) {
+      return '';
+    }
+    if (checkoutConfig.paymeScriptUrls.length === 0) {
+      throw new Error('3D Secure is enabled but no PayMe script was found');
+    }
+
+    const hash = await this.page.evaluate(
+      async (scriptUrls, isTestMode) => {
+        if (!window.PayMe) {
+          for (const src of scriptUrls) {
+            await new Promise<void>((resolve, reject) => {
+              const script = document.createElement('script');
+              script.src = src;
+              script.onload = () => {
+                resolve();
+              };
+              script.onerror = () => {
+                reject(new Error(`Failed to load PayMe script ${src}`));
+              };
+              document.head.appendChild(script);
+            });
+          }
+        }
+        const data = await window.PayMe?.clientData(isTestMode);
+        return data?.hash ?? '';
+      },
+      checkoutConfig.paymeScriptUrls,
+      checkoutConfig.threeDSecureTestMode,
     );
-    const hash = await this.page.evaluate(async (isTestMode) => {
-      const data = await window.PayMe?.clientData(isTestMode);
-      return data?.hash ?? '';
-    }, threeDSecure.isTestMode ?? false);
     if (!hash) {
       console.warn('createOrder: PayMe client hash is empty');
     }
