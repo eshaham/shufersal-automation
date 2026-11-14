@@ -408,6 +408,30 @@ export interface ShufersalAvailableTimeSlotsResponse {
   [date: string]: ShufersalTimeSlot[];
 }
 
+export interface ShufersalCheckoutAuthResponse {
+  success: boolean;
+  message: string | null;
+}
+
+export interface ShufersalPlaceOrderResult {
+  success?: boolean;
+  redirect?: string;
+  allocationTimeout?: boolean;
+  otherCreditCard3DSLink?: string;
+  directCreditCard3DSLink?: string;
+}
+
+export interface ShufersalCheckoutError {
+  type?: string;
+  code?: string;
+  errorCode?: string;
+  message?: string;
+}
+
+export type ShufersalPlaceOrderResponse =
+  | ShufersalPlaceOrderResult
+  | ShufersalCheckoutError[];
+
 export interface NamedEntity {
   code: string;
   name: string;
