@@ -38,7 +38,7 @@
     "husky": "^9.1.7",
     "jest": "^30.2.0",
     "lint-staged": "^16.1.6",
-    "markdownlint-cli": "^0.45.0",
+    "markdownlint-cli": "^0.50.0",
     "prettier": "^3.5.1",
     "ts-jest": "^29.4.5",
     "tsx": "^4.21.0",
@@ -47,6 +47,7 @@
   },
   "dependencies": {
     "dayjs": "^1.11.18",
-    "puppeteer-core": "^24.2.1"
+    "puppeteer-core": "^25.17.0",
+    "tslib": "^2.9.1"
   }
 }
