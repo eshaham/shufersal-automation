@@ -3,7 +3,7 @@ import path from 'path';
 
 import {
   parseCartModifications,
-  parseOrderCodeFromRedirect,
+  parseOrderCodeFromConfirmation,
   parseOrderInUpdateMode,
   rawCartPageToCartMutationResult,
 } from './cartParser';
@@ -87,22 +87,61 @@ describe('parseCartModifications', () => {
   });
 });
 
-describe('parseOrderCodeFromRedirect', () => {
-  it('extracts the order code from the confirmation path', () => {
+describe('parseOrderCodeFromConfirmation', () => {
+  const confirmationUrl =
+    'https://www.shufersal.co.il/online/he/miglog-confirmation';
+
+  it('extracts the order code from a confirmation URL', () => {
     expect(
-      parseOrderCodeFromRedirect('/checkout/orderConfirmation/05642313'),
-    ).toBe('05642313');
-    expect(
-      parseOrderCodeFromRedirect(
+      parseOrderCodeFromConfirmation(
         'https://www.shufersal.co.il/online/he/checkout/orderConfirmation/05642313?x=1',
+        '',
       ),
     ).toBe('05642313');
   });
 
-  it('returns null for other redirects', () => {
-    expect(parseOrderCodeFromRedirect('/cart')).toBeNull();
+  it('extracts the order code from a link to the order', () => {
     expect(
-      parseOrderCodeFromRedirect('/checkout/orderConfirmation/'),
+      parseOrderCodeFromConfirmation(
+        confirmationUrl,
+        '<a href="/online/he/my-account/orders">ההזמנות שלי</a><div class="orderFunctions"><a class="view" href="/online/he/my-account/orders/05707808">צפייה בהזמנה</a></div>',
+      ),
+    ).toBe('05707808');
+  });
+
+  it('extracts the order code from analytics data', () => {
+    expect(
+      parseOrderCodeFromConfirmation(
+        confirmationUrl,
+        "<script>dataLayer.push({event:'purchase',ecommerce:{transaction_id:'05707808'}})</script>",
+      ),
+    ).toBe('05707808');
+  });
+
+  it('extracts the order code from the order number text', () => {
+    expect(
+      parseOrderCodeFromConfirmation(
+        confirmationUrl,
+        '<h2>תודה! ההזמנה התקבלה</h2><p>מספר הזמנה: <strong>05707808</strong></p>',
+      ),
+    ).toBe('05707808');
+    expect(
+      parseOrderCodeFromConfirmation(
+        confirmationUrl,
+        '<p>הזמנה מס׳ 05707808</p>',
+      ),
+    ).toBe('05707808');
+  });
+
+  it('returns null when the page has no order code', () => {
+    expect(parseOrderCodeFromConfirmation('/miglog-confirmation', '')).toBe(
+      null,
+    );
+    expect(
+      parseOrderCodeFromConfirmation(
+        confirmationUrl,
+        '<a href="/online/he/my-account/orders">ההזמנות שלי</a><span>₪ 432.10</span>',
+      ),
     ).toBeNull();
   });
 });
