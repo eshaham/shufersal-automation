@@ -92,9 +92,35 @@ export function parseOrderInUpdateMode(text: string): string | null {
   return match ? match[1] : null;
 }
 
-export function parseOrderCodeFromRedirect(redirect: string): string | null {
-  const match = /\/orderConfirmation\/([^/?#]+)/.exec(redirect);
-  return match ? decodeURIComponent(match[1]) : null;
+const CONFIRMATION_URL_ORDER_CODE_PATTERNS = [
+  /\/orderConfirmation\/(\d{6,})/,
+  /[?&]orderCode=(\d{6,})/,
+];
+
+const CONFIRMATION_HTML_ORDER_CODE_PATTERNS = [
+  /\/my-account\/orders?\/(\d{6,})/,
+  /\/orderConfirmation\/(\d{6,})/,
+  /["']?(?:orderCode|orderNumber|transaction_?[iI]d)["']?\s*[:=]\s*["']?(\d{6,})/,
+  /(?:מספר\s+(?:ה)?הזמנה|הזמנה\s+מס(?:פר|['׳.])?)\D{0,30}(\d{6,})/,
+];
+
+export function parseOrderCodeFromConfirmation(
+  url: string,
+  html: string,
+): string | null {
+  for (const pattern of CONFIRMATION_URL_ORDER_CODE_PATTERNS) {
+    const match = pattern.exec(url);
+    if (match) {
+      return match[1];
+    }
+  }
+  for (const pattern of CONFIRMATION_HTML_ORDER_CODE_PATTERNS) {
+    const match = pattern.exec(html);
+    if (match) {
+      return match[1];
+    }
+  }
+  return null;
 }
 
 export function rawCartPageToCartMutationResult(

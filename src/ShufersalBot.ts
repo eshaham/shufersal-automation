@@ -43,7 +43,7 @@ import utc from 'dayjs/plugin/utc';
 import puppeteer, { Browser, BrowserContext, Page } from 'puppeteer-core';
 
 import {
-  parseOrderCodeFromRedirect,
+  parseOrderCodeFromConfirmation,
   RawCartPage,
   rawCartPageToCartMutationResult,
 } from './cartParser';
@@ -360,6 +360,16 @@ function cartItemToShufersalCartItemAdd(
   };
 }
 
+function getConfirmationExcerpt(html: string): string {
+  const text = html
+    .replace(/<(script|style)[\s\S]*?<\/\1>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ');
+  const index = text.indexOf('הזמנה');
+  const start = index === -1 ? 0 : Math.max(0, index - 100);
+  return JSON.stringify(text.slice(start, start + 300));
+}
+
 function getOrderConfirmationPath(
   response: ShufersalPlaceOrderResponse | undefined,
 ): string {
@@ -399,7 +409,12 @@ interface ApiRequestConfig {
   form?: Record<string, string>;
 }
 
-type ResponseFormat = 'json' | 'cart';
+type ResponseFormat = 'json' | 'cart' | 'page';
+
+interface RawPage {
+  url: string;
+  html: string;
+}
 
 export interface CartEntryOptions {
   entryNumber?: number;
@@ -835,25 +850,15 @@ export class ShufersalSession {
     const confirmationPath = getOrderConfirmationPath(response);
     console.info('createOrder: Order placed successfully');
 
-    const orderCode = parseOrderCodeFromRedirect(confirmationPath);
-    if (orderCode) {
-      const orderDetails = await this.apiRequest<ShufersalOrderDetails>({
-        method: 'GET',
-        path: `/my-account/orders/${orderCode}`,
-      });
-      if (orderDetails) {
-        return shufersalAccountOrderToOrderInfo(orderDetails);
-      }
-      console.warn(
-        `createOrder: Could not load order ${orderCode}, falling back to the order list`,
-      );
-    } else {
-      console.warn(
-        `createOrder: Could not parse order code from ${confirmationPath}, falling back to the order list`,
-      );
+    const deliveryDateTime = new Date(timeSlotStartTime).toISOString();
+    const confirmedOrder = await this.getConfirmedOrder(
+      confirmationPath,
+      deliveryDateTime,
+    );
+    if (confirmedOrder) {
+      return confirmedOrder;
     }
 
-    const deliveryDateTime = new Date(timeSlotStartTime).toISOString();
     const accountOrders = await this.getOrders();
     const matchingOrder = accountOrders.activeOrders.find(
       (order) => order.deliveryDateTime === deliveryDateTime,
@@ -864,6 +869,58 @@ export class ShufersalSession {
       );
     }
     return matchingOrder;
+  }
+
+  private async getConfirmedOrder(
+    confirmationPath: string,
+    deliveryDateTime: string,
+  ): Promise<OrderInfo | null> {
+    let confirmationPage: RawPage | undefined;
+    try {
+      confirmationPage = await this.pageRequest(confirmationPath);
+    } catch (error) {
+      console.warn(
+        `createOrder: Could not load ${confirmationPath}, falling back to the order list`,
+        error,
+      );
+      return null;
+    }
+    if (!confirmationPage) {
+      console.warn(
+        `createOrder: Empty response from ${confirmationPath}, falling back to the order list`,
+      );
+      return null;
+    }
+
+    const orderCode = parseOrderCodeFromConfirmation(
+      confirmationPage.url,
+      confirmationPage.html,
+    );
+    if (!orderCode) {
+      console.warn(
+        `createOrder: Could not find the order code on ${confirmationPage.url} (${String(confirmationPage.html.length)} chars), falling back to the order list. Page excerpt: ${getConfirmationExcerpt(confirmationPage.html)}`,
+      );
+      return null;
+    }
+
+    const orderDetails = await this.apiRequest<ShufersalOrderDetails>({
+      method: 'GET',
+      path: `/my-account/orders/${orderCode}`,
+    });
+    if (!orderDetails) {
+      console.warn(
+        `createOrder: Could not load order ${orderCode}, falling back to the order list`,
+      );
+      return null;
+    }
+    const order = shufersalAccountOrderToOrderInfo(orderDetails);
+    if (order.deliveryDateTime !== deliveryDateTime) {
+      console.warn(
+        `createOrder: Order ${orderCode} from the confirmation page is for ${order.deliveryDateTime}, expected ${deliveryDateTime}, falling back to the order list`,
+      );
+      return null;
+    }
+    return order;
   }
 
   async putOrderInUpdateMode(code: string): Promise<void> {
@@ -1278,6 +1335,12 @@ export class ShufersalSession {
     return (await this.sendRequest(config, 'json')) as T | undefined;
   }
 
+  private async pageRequest(path: string): Promise<RawPage | undefined> {
+    return (await this.sendRequest({ method: 'GET', path }, 'page')) as
+      | RawPage
+      | undefined;
+  }
+
   private async cartRequest(
     config: ApiRequestConfig,
   ): Promise<CartMutationResult> {
@@ -1329,7 +1392,7 @@ export class ShufersalSession {
               body: requestBody,
               mode: 'cors',
               credentials: 'include',
-              redirect: 'manual',
+              redirect: responseFormat === 'page' ? 'follow' : 'manual',
             });
 
             if (
@@ -1411,6 +1474,13 @@ export class ShufersalSession {
                   bodyText: doc.body.textContent,
                   modificationsScript,
                 },
+              };
+            }
+
+            if (responseFormat === 'page') {
+              return {
+                status: response.status,
+                data: { url: response.url, html: await response.text() },
               };
             }
 
