@@ -167,6 +167,7 @@ describe('rawCartPageToCartMutationResult', () => {
           quantity: 2,
           entryNumber: 0,
           itemPrice: 4.18,
+          itemDiscount: 0.9,
           isOutOfStock: false,
         },
         {
@@ -174,6 +175,7 @@ describe('rawCartPageToCartMutationResult', () => {
           quantity: 1,
           entryNumber: 1,
           itemPrice: 0,
+          itemDiscount: 0,
           isOutOfStock: true,
         },
       ],
@@ -188,6 +190,7 @@ describe('rawCartPageToCartMutationResult', () => {
         quantity: 2,
         entryNumber: 0,
         itemPrice: 4.18,
+        itemDiscount: 0.9,
         inStock: true,
       },
       {
@@ -195,6 +198,7 @@ describe('rawCartPageToCartMutationResult', () => {
         quantity: 1,
         entryNumber: 1,
         itemPrice: 0,
+        itemDiscount: 0,
         inStock: false,
       },
     ]);

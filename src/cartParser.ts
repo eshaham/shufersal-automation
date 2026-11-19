@@ -9,6 +9,7 @@ export interface RawCartArticle {
   quantity: number;
   entryNumber: number;
   itemPrice: number;
+  itemDiscount: number;
   isOutOfStock: boolean;
 }
 
@@ -131,6 +132,7 @@ export function rawCartPageToCartMutationResult(
     productCode: article.productCode,
     quantity: article.quantity,
     itemPrice: article.itemPrice,
+    itemDiscount: article.itemDiscount,
     inStock: !article.isOutOfStock,
     rawData: article,
   }));

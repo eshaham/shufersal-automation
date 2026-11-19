@@ -1484,6 +1484,10 @@ export class ShufersalSession {
                     el.querySelector('.miglog-prod-totalPrize')?.textContent ??
                     ''
                   ).trim() || '0';
+                const discountText =
+                  el
+                    .querySelector('.miglog-prod-totalDiscount')
+                    ?.textContent.trim() ?? '';
                 return {
                   productCode: el.getAttribute('data-product-code') ?? '',
                   quantity: parseFloat(
@@ -1494,6 +1498,8 @@ export class ShufersalSession {
                     10,
                   ),
                   itemPrice: parseFloat(priceText.replace(/[^\d.]/g, '')) || 0,
+                  itemDiscount:
+                    parseFloat(discountText.replace(/[^\d.]/g, '')) || 0,
                   isOutOfStock: el.classList.contains(
                     'miglog-cart-prod-notInStock',
                   ),
