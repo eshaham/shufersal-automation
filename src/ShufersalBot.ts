@@ -21,6 +21,7 @@ import {
   ShufersalAccountOrders,
   ShufersalAvailableTimeSlotsResponse,
   ShufersalBase,
+  ShufersalCartEntryModify,
   ShufersalCartItemAdd,
   ShufersalCheckoutAuthResponse,
   ShufersalCheckoutEntry,
@@ -360,6 +361,19 @@ function cartItemToShufersalCartItemAdd(
   };
 }
 
+function cartEntryToShufersalRemoval(
+  entry: CartEntryToRemove,
+): ShufersalCartEntryModify {
+  return {
+    productCode: entry.productCode,
+    frontQuantity: 0,
+    sellingMethod: ShufersalSellingMethod.Unit,
+    comment: '',
+    entry: entry.entryNumber,
+    affiliateCode: '',
+  };
+}
+
 function getConfirmationExcerpt(html: string): string {
   const text = html
     .replace(/<(script|style)[\s\S]*?<\/\1>/gi, ' ')
@@ -418,6 +432,11 @@ interface RawPage {
 
 export interface CartEntryOptions {
   entryNumber?: number;
+}
+
+export interface CartEntryToRemove {
+  productCode: string;
+  entryNumber: number;
 }
 
 export interface OrderLookupOptions {
@@ -656,20 +675,46 @@ export class ShufersalSession {
           }));
     const modifications = [...result.modifications];
 
-    for (const productCode of productCodesToRemove) {
-      const cartItem = result.items.find(
-        (item) => item.productCode === productCode,
-      );
-      if (!cartItem) {
-        continue;
-      }
-      result = await this.removeFromCart(productCode, {
-        entryNumber: cartItem.entryNumber,
-      });
+    const entriesToRemove = result.items.filter((item) =>
+      productCodesToRemove.includes(item.productCode),
+    );
+    if (entriesToRemove.length > 0) {
+      result = await this.removeItemsFromCart(entriesToRemove);
       modifications.push(...result.modifications);
     }
 
     return { ...result, modifications };
+  }
+
+  async removeItemsFromCart(
+    entries: CartEntryToRemove[],
+  ): Promise<CartMutationResult> {
+    if (entries.length === 0) {
+      const state = await this.getCartState();
+      return { ...state, modifications: [] };
+    }
+
+    const query = new URLSearchParams({
+      'cartContext[openFrom]': 'CART',
+      'cartContext[recommendationType]': 'REGULAR',
+    });
+    const result = await this.cartRequest({
+      method: 'POST',
+      path: `/cart/modify?${query.toString()}`,
+      body: entries.map(cartEntryToShufersalRemoval),
+    });
+
+    const productCodes = new Set(entries.map((entry) => entry.productCode));
+    const notRemoved = result.items
+      .filter((item) => productCodes.has(item.productCode))
+      .map((item) => item.productCode);
+    if (notRemoved.length > 0) {
+      throw new Error(
+        `Shufersal did not remove cart items: ${notRemoved.join(', ')}`,
+      );
+    }
+
+    return result;
   }
 
   async updateCartItemQuantity(
@@ -810,20 +855,12 @@ export class ShufersalSession {
       console.info(
         `createOrder: Removing ${String(missingProductCodes.length)} out-of-stock items`,
       );
-      let entries = checkout.directCart.entries.map((entry) => ({
-        productCode: entry.product.code,
-        entryNumber: entry.entryNumber,
-      }));
-      for (const productCode of missingProductCodes) {
-        const entry = entries.find((e) => e.productCode === productCode);
-        if (!entry) {
-          continue;
-        }
-        const { items } = await this.removeFromCart(productCode, {
+      await this.removeItemsFromCart(
+        missingEntries.map((entry) => ({
+          productCode: entry.product.code,
           entryNumber: entry.entryNumber,
-        });
-        entries = items;
-      }
+        })),
+      );
       checkout = await this.getComposedCheckout();
     }
 

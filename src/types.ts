@@ -315,6 +315,15 @@ export interface ShufersalCartItemAdd {
   longTail: boolean;
 }
 
+export interface ShufersalCartEntryModify {
+  productCode: string;
+  frontQuantity: number;
+  sellingMethod: ShufersalSellingMethod;
+  comment: string;
+  entry: number;
+  affiliateCode: string;
+}
+
 export interface ShufersalCheckoutEntry extends ShufersalOrderEntry {
   outOfStock?: boolean;
 }
