@@ -24,6 +24,7 @@ function cartItem(productCode: string, entryNumber: number): ExistingCartItem {
     entryNumber,
     quantity: 1,
     itemPrice: 10,
+    itemDiscount: 0,
     inStock: true,
     rawData: {},
   };

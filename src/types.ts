@@ -497,6 +497,7 @@ export interface Item {
 export interface ExistingCartItem extends Item {
   entryNumber: number;
   itemPrice: number;
+  itemDiscount: number;
   inStock: boolean;
 }
 
