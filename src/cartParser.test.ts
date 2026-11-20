@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 
 import {
+  parseCartHtml,
   parseCartModifications,
   parseOrderCodeFromConfirmation,
   parseOrderInUpdateMode,
@@ -213,5 +214,27 @@ describe('rawCartPageToCartMutationResult', () => {
         modificationsScript: null,
       }),
     ).toEqual({ items: [], orderInUpdateMode: null, modifications: [] });
+  });
+});
+
+describe('parseCartHtml', () => {
+  it('parses cart articles with their price and entry number', () => {
+    const result = parseCartHtml(
+      '<html><body><article class="miglog-cart-prod" data-product-code="P_1" data-entry-qty="2" data-entry-number="0"><span class="miglog-prod-totalPrize">12.90 ₪</span></article></body></html>',
+    );
+
+    expect(result).toMatchObject({
+      articles: [
+        {
+          productCode: 'P_1',
+          quantity: 2,
+          entryNumber: 0,
+          itemPrice: 12.9,
+          itemDiscount: 0,
+          isOutOfStock: false,
+        },
+      ],
+      modificationsScript: null,
+    });
   });
 });
