@@ -1,8 +1,9 @@
-import { ShufersalSession } from './ShufersalBot';
+import { shufersalOrderEntryToItem, ShufersalSession } from './ShufersalBot';
 import {
   CartMutationResult,
   ExistingCartItem,
   SellingMethod,
+  ShufersalOrderEntry,
   ShufersalSellingMethod,
 } from './types';
 
@@ -122,5 +123,59 @@ describe('setCartItemQuantities', () => {
       expect.objectContaining({ productCode: 'P_3', entry: 2 }),
     ]);
     expect(result.items).toEqual(afterRemove);
+  });
+});
+
+function packedOrderEntry(
+  overrides: Partial<ShufersalOrderEntry>,
+): ShufersalOrderEntry {
+  return {
+    entryNumber: 0,
+    quantity: 1900,
+    basePrice: { value: 14.9 },
+    totalPrice: { value: 28.3 },
+    product: {
+      code: 'P_7296073440611',
+      name: 'apples',
+      sellingMethod: { code: ShufersalSellingMethod.Package },
+      weightConversion: 950,
+      price: { value: 14.9 },
+      stock: { stockLevelStatus: { code: 'inStock' } },
+      images: [],
+      promotionCodes: [],
+    },
+    ...overrides,
+  } as unknown as ShufersalOrderEntry;
+}
+
+describe('shufersalOrderEntryToItem', () => {
+  it('prices a packed item per pack, not per kilogram', () => {
+    const item = shufersalOrderEntryToItem(packedOrderEntry({}));
+
+    expect(item.product.sellingMethod).toBe(SellingMethod.Unit);
+    expect(item.quantity).toBe(2);
+    expect(item.basePricePerUnit).toBe(14.15);
+    expect(item.actualPricePerUnit).toBe(14.15);
+  });
+
+  it('uses the paid price as base when per-pack rounding differs', () => {
+    const item = shufersalOrderEntryToItem(
+      packedOrderEntry({
+        totalPrice: { value: 28.32 },
+      } as Partial<ShufersalOrderEntry>),
+    );
+
+    expect(item.basePricePerUnit).toBe(14.16);
+    expect(item.actualPricePerUnit).toBe(14.16);
+  });
+
+  it('keeps a packed item discount relative to the per-pack price', () => {
+    const item = shufersalOrderEntryToItem(
+      packedOrderEntry({ priceAfterDiscount: 20, discount: 8.3 }),
+    );
+
+    expect(item.basePricePerUnit).toBe(14.16);
+    expect(item.actualPricePerUnit).toBe(10);
+    expect(item.discountAmount).toBe(8.3);
   });
 });
