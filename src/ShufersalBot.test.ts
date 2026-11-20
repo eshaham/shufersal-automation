@@ -2,6 +2,7 @@ import { shufersalOrderEntryToItem, ShufersalSession } from './ShufersalBot';
 import {
   CartMutationResult,
   ExistingCartItem,
+  Product,
   SellingMethod,
   ShufersalCheckoutEntry,
   ShufersalComposedCheckout,
@@ -125,6 +126,115 @@ describe('setCartItemQuantities', () => {
       expect.objectContaining({ productCode: 'P_3', entry: 2 }),
     ]);
     expect(result.items).toEqual(afterRemove);
+  });
+});
+
+function product(code: string, inStock: boolean): Product {
+  return { code, inStock, purchasable: true } as Product;
+}
+
+function stubProducts(session: ShufersalSession, products: Product[]) {
+  return jest
+    .spyOn(session, 'getProductByCode')
+    .mockImplementation((code) =>
+      Promise.resolve(products.find((p) => p.code === code) ?? null),
+    );
+}
+
+describe('addToCart', () => {
+  let warn: jest.SpyInstance;
+  beforeEach(() => {
+    warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+  });
+  afterEach(() => {
+    warn.mockRestore();
+  });
+
+  const lemon = {
+    productCode: 'P_OOS',
+    quantity: 1,
+    sellingMethod: SellingMethod.Weight,
+  };
+  const milk = {
+    productCode: 'P_1',
+    quantity: 2,
+    sellingMethod: SellingMethod.Unit,
+  };
+
+  it('adds everything in one request when Shufersal accepts it', async () => {
+    const { session, cartRequest } = createSession([
+      cartResult([cartItem('P_1', 0)]),
+    ]);
+    const getProductByCode = stubProducts(session, []);
+
+    await session.addToCart([milk]);
+
+    expect(cartRequest).toHaveBeenCalledTimes(1);
+    expect(getProductByCode).not.toHaveBeenCalled();
+  });
+
+  it('adds the rest and reports out-of-stock items when the batch fails', async () => {
+    const { session, cartRequest } = createSession([]);
+    cartRequest
+      .mockRejectedValueOnce(new Error('Request failed: 500'))
+      .mockResolvedValueOnce(cartResult([cartItem('P_1', 0)]));
+    stubProducts(session, [product('P_1', true), product('P_OOS', false)]);
+
+    const result = await session.addToCart([lemon, milk]);
+
+    expect(cartRequest).toHaveBeenCalledTimes(2);
+    expect(cartRequest.mock.calls[1][0].body).toEqual([
+      expect.objectContaining({ productCode: 'P_1', quantity: 2 }),
+    ]);
+    expect(result.items).toEqual([cartItem('P_1', 0)]);
+    expect(result.modifications).toEqual([
+      expect.objectContaining({
+        productCode: 'P_OOS',
+        statusCode: 'noStock',
+        quantity: 0,
+      }),
+    ]);
+  });
+
+  it('reads the cart instead of adding when every item is unavailable', async () => {
+    const { session, cartRequest } = createSession([]);
+    cartRequest.mockRejectedValueOnce(new Error('Request failed: 500'));
+    stubProducts(session, [product('P_OOS', false)]);
+    const getCartState = jest
+      .spyOn(session, 'getCartState')
+      .mockResolvedValue({ items: [], orderInUpdateMode: null });
+
+    const result = await session.addToCart([lemon]);
+
+    expect(cartRequest).toHaveBeenCalledTimes(1);
+    expect(getCartState).toHaveBeenCalledTimes(1);
+    expect(result.modifications).toEqual([
+      expect.objectContaining({ productCode: 'P_OOS', statusCode: 'noStock' }),
+    ]);
+  });
+
+  it('rethrows when every item is in stock', async () => {
+    const { session, cartRequest } = createSession([]);
+    cartRequest.mockRejectedValueOnce(new Error('Request failed: 500'));
+    stubProducts(session, [product('P_1', true)]);
+
+    await expect(session.addToCart([milk])).rejects.toThrow(
+      'Request failed: 500',
+    );
+    expect(cartRequest).toHaveBeenCalledTimes(1);
+  });
+
+  it('rethrows the add error when the stock check fails', async () => {
+    const { session, cartRequest } = createSession([]);
+    cartRequest.mockRejectedValueOnce(new Error('Request failed: 500'));
+    jest
+      .spyOn(session, 'getProductByCode')
+      .mockRejectedValue(new Error('lookup failed'));
+
+    await expect(session.addToCart([milk])).rejects.toThrow(
+      'Request failed: 500',
+    );
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('lookup failed'));
   });
 });
 

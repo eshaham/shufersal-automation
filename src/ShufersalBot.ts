@@ -1,6 +1,7 @@
 import {
   AccountOrders,
   CartItemToAdd,
+  CartModification,
   CartMutationResult,
   CartState,
   DeliveryTimeSlot,
@@ -402,6 +403,19 @@ function cartEntryToShufersalRemoval(
   };
 }
 
+function unavailableCartModification(
+  productCode: string,
+  product: Product | null,
+): CartModification {
+  return {
+    productCode,
+    statusCode: product && !product.inStock ? 'noStock' : 'unavailable',
+    entryNumber: null,
+    quantity: 0,
+    rawData: {},
+  };
+}
+
 function getConfirmationExcerpt(html: string): string {
   const text = html
     .replace(/<(script|style)[\s\S]*?<\/\1>/gi, ' ')
@@ -797,10 +811,65 @@ export class ShufersalSession {
   }
 
   async addToCart(items: CartItemToAdd[]): Promise<CartMutationResult> {
+    try {
+      return await this.addGridRequest(items);
+    } catch (error) {
+      const unavailable = await this.findUnavailableItems(items, error);
+      if (unavailable.length === 0) {
+        throw error;
+      }
+
+      const unavailableCodes = new Set(
+        unavailable.map((modification) => modification.productCode),
+      );
+      console.warn(
+        `[shufersal] cart/addGrid failed with unavailable items ${unavailable.map((modification) => modification.productCode).join(', ')}; adding the rest without them`,
+      );
+      const availableItems = items.filter(
+        (item) => !unavailableCodes.has(item.productCode),
+      );
+      const result =
+        availableItems.length > 0
+          ? await this.addGridRequest(availableItems)
+          : { ...(await this.getCartState()), modifications: [] };
+      return {
+        ...result,
+        modifications: [...result.modifications, ...unavailable],
+      };
+    }
+  }
+
+  private async addGridRequest(
+    items: CartItemToAdd[],
+  ): Promise<CartMutationResult> {
     return this.cartRequest({
       method: 'POST',
       path: '/cart/addGrid',
       body: items.map(cartItemToShufersalCartItemAdd),
+    });
+  }
+
+  private async findUnavailableItems(
+    items: CartItemToAdd[],
+    addError: unknown,
+  ): Promise<CartModification[]> {
+    let products: (Product | null)[];
+    try {
+      products = await Promise.all(
+        items.map((item) => this.getProductByCode(item.productCode)),
+      );
+    } catch (lookupError) {
+      console.warn(
+        `[shufersal] could not check stock after cart/addGrid failed: ${lookupError instanceof Error ? lookupError.message : String(lookupError)}`,
+      );
+      throw addError;
+    }
+
+    return items.flatMap((item, index) => {
+      const product = products[index];
+      return product?.inStock && product.purchasable
+        ? []
+        : [unavailableCartModification(item.productCode, product)];
     });
   }
 
