@@ -1,8 +1,14 @@
 # HTTP transport and browser fallback
 
-A session talks to Shufersal over plain HTTP from Node. It opens a browser only
-when it needs one. If Shufersal ever starts blocking plain HTTP, the session
-switches to the browser on its own, so nothing breaks while we look into it.
+With `transport: 'http'`, a session talks to Shufersal over plain HTTP from
+Node. It opens a browser only when it needs one. If Shufersal ever starts
+blocking plain HTTP, the session switches to the browser on its own, so nothing
+breaks while we look into it.
+
+The default is still `transport: 'browser'`, so callers built on the old API
+(overriding `initSession`, reading `session.browserPage`) keep working until
+they opt in. Once Salchik has moved over, `http` becomes the default and
+`initSession`, `browserPage` and `browserContext` go away.
 
 ## What runs where
 
@@ -65,15 +71,18 @@ If the warning shows up, Shufersal has probably started blocking plain HTTP.
 Check what the HTTP response was (the warning includes its status and the start
 of its body) before changing anything.
 
-## Forcing the browser
+## Choosing the transport
 
-Pass `transport: 'browser'` to `ShufersalBot` to skip HTTP entirely and get the
-old behavior back: the session loads `/wish-lists/main` in the browser on
-restore and sends every request from the page.
+Pass `transport: 'http'` to `ShufersalBot` to send requests from Node:
 
 ```typescript
-const bot = new ShufersalBot({ browserWSEndpoint, transport: 'browser' });
+const bot = new ShufersalBot({ browserWSEndpoint, transport: 'http' });
 ```
+
+With `transport: 'browser'` (the default for now) the session skips HTTP
+entirely, as before this change: it opens its browser page when it is created,
+loads `/wish-lists/main` on restore and sends every request from the page. Use
+it to go back to the browser if Shufersal starts blocking HTTP.
 
 ## Opening the browser lazily
 

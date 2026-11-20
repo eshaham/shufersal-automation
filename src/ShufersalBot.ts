@@ -493,13 +493,32 @@ export class ShufersalSession {
     private credentials: ShufersalCredentials,
     options: ShufersalSessionOptions = {},
   ) {
-    this.transport = options.transport ?? 'http';
+    this.transport = options.transport ?? 'browser';
     this.jar = new CookieJar(options.cookies);
     this.http = new HttpTransport(this.jar, options.fetch);
   }
 
   get activeTransport(): SessionTransport {
     return this.transport;
+  }
+
+  get browserPage(): Page {
+    return this.page;
+  }
+
+  get browserContext(): BrowserContext {
+    if (!this.browser) {
+      throw new Error('No browser page is open for this session');
+    }
+    return this.browser.context;
+  }
+
+  loadCookies(cookies: CookieData[]): void {
+    this.jar.replaceAll(cookies);
+  }
+
+  async openBrowserPage(): Promise<BrowserPage> {
+    return this.ensureBrowser();
   }
 
   get hasBrowser(): boolean {
@@ -1744,18 +1763,11 @@ export class ShufersalBot {
     password: string,
     sessionData?: SerializedSessionData,
   ): Promise<ShufersalSession> {
-    const session = new ShufersalSession(
-      () => this.openBrowserPage(),
-      { username, password },
-      {
-        cookies: sessionData?.cookies as CookieData[] | undefined,
-        transport: this.options.transport,
-        fetch: this.options.fetch,
-      },
-    );
+    const session = await this.initSession(username, password);
 
     try {
       if (sessionData) {
+        session.loadCookies(sessionData.cookies as CookieData[]);
         await session.restore();
       } else {
         await session.performLogin();
@@ -1780,6 +1792,21 @@ export class ShufersalBot {
       return createSessionProxy(session);
     }
 
+    return session;
+  }
+
+  protected async initSession(
+    username: string,
+    password: string,
+  ): Promise<ShufersalSession> {
+    const session = new ShufersalSession(
+      () => this.openBrowserPage(),
+      { username, password },
+      { transport: this.options.transport, fetch: this.options.fetch },
+    );
+    if (session.activeTransport === 'browser') {
+      await session.openBrowserPage();
+    }
     return session;
   }
 

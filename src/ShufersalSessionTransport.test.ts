@@ -1,6 +1,11 @@
 import type { CookieData } from 'puppeteer-core';
 
-import { BrowserPage, ShufersalSession, WEBAPP_URL } from './ShufersalBot';
+import {
+  BrowserPage,
+  ShufersalBot,
+  ShufersalSession,
+  WEBAPP_URL,
+} from './ShufersalBot';
 
 jest.mock('puppeteer-core', () => ({ __esModule: true, default: {} }));
 
@@ -56,7 +61,7 @@ function createSession(responses: Response[], cookies = STORED_COOKIES) {
   const session = new ShufersalSession(
     browser.openBrowser,
     { username: 'user', password: 'password' },
-    { cookies, fetch: fetchMock as typeof fetch },
+    { cookies, fetch: fetchMock as typeof fetch, transport: 'http' },
   );
   return { session, fetchMock, ...browser };
 }
@@ -241,5 +246,53 @@ describe('ShufersalSession browser fallback', () => {
         httpOnly: true,
       },
     ]);
+  });
+});
+
+describe('ShufersalBot transport choice', () => {
+  function createBot(transport?: 'http' | 'browser') {
+    const { page, context } = createBrowser();
+    page.evaluate.mockResolvedValue(true);
+    const browser = {
+      createBrowserContext: jest.fn().mockResolvedValue({
+        ...context,
+        newPage: jest.fn().mockResolvedValue(page),
+      }),
+    };
+    const bot = new ShufersalBot({
+      browser: browser as unknown as ConstructorParameters<
+        typeof ShufersalBot
+      >[0]['browser'],
+      transport,
+    });
+    return { bot, browser, page };
+  }
+
+  it('keeps the browser behavior by default', async () => {
+    const { bot, browser, page } = createBot();
+
+    const session = await bot.createSession('user', 'password', {
+      cookies: STORED_COOKIES,
+    });
+
+    expect(browser.createBrowserContext).toHaveBeenCalledTimes(1);
+    expect(session.activeTransport).toBe('browser');
+    expect(session.browserPage).toBe(page);
+    expect(page.goto).toHaveBeenCalledWith(
+      `${WEBAPP_URL}/wish-lists/main`,
+      expect.anything(),
+    );
+  });
+
+  it('opens no browser to restore an HTTP session', async () => {
+    const { bot, browser } = createBot('http');
+
+    const session = await bot.createSession('user', 'password', {
+      cookies: STORED_COOKIES,
+    });
+
+    expect(browser.createBrowserContext).not.toHaveBeenCalled();
+    expect(session.activeTransport).toBe('http');
+    expect(session.hasBrowser).toBe(false);
   });
 });
