@@ -285,18 +285,24 @@ function shufersalProductToProduct(product: ShufersalProduct): Product {
   };
 }
 
-function shufersalOrderEntryToItem(entry: ShufersalOrderEntry): ItemDetails {
+const GRAMS_PER_KG = 1000;
+
+export function shufersalOrderEntryToItem(
+  entry: ShufersalOrderEntry,
+): ItemDetails {
   let quantity = entry.quantity;
+  let basePrice = entry.basePrice.value;
   const product = shufersalProductToProduct(entry.product);
-  if (
+  const isPacked =
     entry.product.sellingMethod.code === ShufersalSellingMethod.Package &&
-    entry.product.weightConversion
-  ) {
+    !!entry.product.weightConversion;
+  if (isPacked && entry.product.weightConversion) {
     product.sellingMethod = SellingMethod.Unit;
     quantity = entry.quantity / entry.product.weightConversion;
+    basePrice = (basePrice * entry.product.weightConversion) / GRAMS_PER_KG;
   }
 
-  const basePricePerUnit = parseFloat(entry.basePrice.value.toFixed(2));
+  let basePricePerUnit = Math.round(basePrice * 100) / 100;
   let actualPricePerUnit: number;
   let discountAmount: number | undefined;
 
@@ -309,6 +315,9 @@ function shufersalOrderEntryToItem(entry: ShufersalOrderEntry): ItemDetails {
     actualPricePerUnit = parseFloat(
       (entry.totalPrice.value / quantity).toFixed(2),
     );
+    if (isPacked) {
+      basePricePerUnit = actualPricePerUnit;
+    }
   }
 
   const promotions: PromotionInfo[] = (entry.promotionOrderEntries || [])
