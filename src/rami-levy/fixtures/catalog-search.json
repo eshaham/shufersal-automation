@@ -1,0 +1,196 @@
+{
+  "q": "חלב",
+  "status": 200,
+  "total": 132,
+  "data": [
+    {
+      "kosher_type": null,
+      "price": {
+        "price": 7.1
+      },
+      "prop": {
+        "unit": 0,
+        "sw_shakil": 0,
+        "by_kilo": 0,
+        "by_kilo_content": 0,
+        "status": 2
+      },
+      "id": 419939,
+      "multiplication": 1,
+      "department": {
+        "name": "חלב ביצים וסלטים",
+        "id": 50,
+        "sort": 20,
+        "slug": "חלב-ביצים-וסלטים"
+      },
+      "barcode": 7290001794852,
+      "brand": 2,
+      "group": {
+        "name": "חלב",
+        "id": 198,
+        "sort": 0,
+        "slug": "חלב"
+      },
+      "images": {
+        "small": "/product/7290001794852/small.jpg",
+        "original": "/product/7290001794852/large.jpg",
+        "trim": "/product/7290001794852/trim.jpg",
+        "transparent": null,
+        "gallery": []
+      },
+      "department_id": 50,
+      "subGroup": {
+        "name": "חלב טרי",
+        "id": 22,
+        "sort": 0,
+        "slug": "חלב-טרי"
+      },
+      "available_in": [
+        82, 179, 279, 290, 306, 331, 412, 1197, 1198, 1214, 1221, 1225, 1226,
+        1306, 1307, 1314, 1323, 1329, 1330, 1332, 1333, 1378, 1389
+      ],
+      "gs": {
+        "BrandName": "רמי לוי שיווק השקמה ",
+        "Product_Description_English": "",
+        "Country_of_Origin": "IL"
+      },
+      "sale": [],
+      "mainImage": 1,
+      "group_id": 198,
+      "name": "חלב טרי 3% 1 ליטר רמי לוי",
+      "site_id": 1,
+      "sub_group_id": 22,
+      "is360": 1,
+      "hl": {
+        "name": ["<em>חלב</em> טרי 3% 1 ליטר רמי לוי"]
+      },
+      "has_coupon": false
+    },
+    {
+      "kosher_type": null,
+      "price": {
+        "price": 7.2
+      },
+      "prop": {
+        "unit": null,
+        "sw_shakil": 0,
+        "by_kilo": 0,
+        "by_kilo_content": 1058,
+        "status": 2
+      },
+      "id": 3025,
+      "multiplication": 1,
+      "department": {
+        "name": "חלב ביצים וסלטים",
+        "id": 50,
+        "sort": 20,
+        "slug": "חלב-ביצים-וסלטים"
+      },
+      "barcode": 7290004131074,
+      "brand": 5228,
+      "group": {
+        "name": "חלב",
+        "id": 198,
+        "sort": 0,
+        "slug": "חלב"
+      },
+      "images": {
+        "small": "/product/7290004131074/small.jpg",
+        "original": "/product/7290004131074/large.jpg",
+        "trim": "/product/7290004131074/trim.jpg",
+        "transparent": "/product/7290004131074/transparent.png",
+        "gallery": []
+      },
+      "department_id": 50,
+      "subGroup": {
+        "name": "חלב טרי",
+        "id": 22,
+        "sort": 0,
+        "slug": "חלב-טרי"
+      },
+      "available_in": [
+        82, 179, 290, 306, 331, 411, 412, 1197, 1198, 1220, 1221, 1225, 1306,
+        1307, 1314, 1323, 1329, 1330, 1332, 1333, 1389, 1401
+      ],
+      "gs": {
+        "BrandName": "תנובה",
+        "Product_Description_English": "",
+        "Country_of_Origin": "IL"
+      },
+      "sale": [],
+      "mainImage": 1,
+      "group_id": 198,
+      "name": "חלב תנובה 3% שומן 1 ל' קרטון בד\"צ",
+      "site_id": 1,
+      "sub_group_id": 22,
+      "is360": 1,
+      "hl": {
+        "name": ["<em>חלב</em> תנובה 3% שומן 1 ל' קרטון בד\"צ"]
+      },
+      "has_coupon": false
+    },
+    {
+      "kosher_type": null,
+      "price": {
+        "price": 8.5
+      },
+      "prop": {
+        "unit": null,
+        "sw_shakil": 0,
+        "by_kilo": 0,
+        "by_kilo_content": 0,
+        "status": 2
+      },
+      "id": 310482,
+      "multiplication": 1,
+      "department": {
+        "name": "חלב ביצים וסלטים",
+        "id": 50,
+        "sort": 20,
+        "slug": "חלב-ביצים-וסלטים"
+      },
+      "barcode": 7290107932080,
+      "brand": 4913,
+      "group": {
+        "name": "חלב",
+        "id": 198,
+        "sort": 0,
+        "slug": "חלב"
+      },
+      "images": {
+        "small": "/product/7290107932080/small.jpg",
+        "original": "/product/7290107932080/large.jpg",
+        "trim": "/product/7290107932080/trim.jpg",
+        "transparent": "/product/7290107932080/transparent.png",
+        "gallery": []
+      },
+      "department_id": 50,
+      "subGroup": {
+        "name": "חלב טרי",
+        "id": 22,
+        "sort": 0,
+        "slug": "חלב-טרי"
+      },
+      "available_in": [
+        82, 279, 290, 306, 331, 411, 412, 1197, 1198, 1214, 1221, 1225, 1226,
+        1306, 1307, 1314, 1323, 1329, 1330, 1332, 1333, 1378, 1401
+      ],
+      "gs": {
+        "BrandName": "יטבתה",
+        "Product_Description_English": "milk 3%",
+        "Country_of_Origin": "IL"
+      },
+      "sale": [],
+      "mainImage": 1,
+      "group_id": 198,
+      "name": "חלב בבקבוק 3% מועשר 1 ליטר",
+      "site_id": 1,
+      "sub_group_id": 22,
+      "is360": 1,
+      "hl": {
+        "name": ["<em>חלב</em> בבקבוק 3% מועשר 1 ליטר"]
+      },
+      "has_coupon": false
+    }
+  ]
+}

@@ -31,6 +31,8 @@ export interface Product {
   priceWithoutDiscount: number;
   depositPrice?: number;
   promotionCodes: string[];
+  barcode?: string;
+  quantityStep?: number;
   rawData: unknown;
 }
 
@@ -145,6 +147,8 @@ export interface OrderDetails extends OrderInfo {
 export interface DeliveryTimeSlot {
   code: string;
   dateTime: string;
+  cutoffDateTime?: string;
+  deliveryFee?: number;
   rawData: unknown;
 }
 
@@ -156,8 +160,15 @@ export interface SearchResults {
   pageSize: number;
 }
 
+export interface SessionCredentials {
+  token: string;
+  expiresAt?: string;
+}
+
 export interface SerializedSessionData {
   cookies: unknown[];
+  credentials?: SessionCredentials;
+  context?: Record<string, string>;
 }
 
 export interface ReceiptPromotion {

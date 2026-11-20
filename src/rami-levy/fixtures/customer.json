@@ -1,0 +1,121 @@
+{
+  "user": {
+    "id": 77577,
+    "first_name": "REDACTED",
+    "last_name": "REDACTED",
+    "email": "REDACTED",
+    "token": "REDACTED",
+    "user_id": "REDACTED",
+    "meta": {
+      "info": {
+        "phone": "REDACTED",
+        "pelefon": null
+      },
+      "notes_messenger1": null,
+      "notes_messenger2": null,
+      "notes_shipment": null
+    },
+    "store_id": "412",
+    "identity_card": "REDACTED",
+    "accounting_card_id": null,
+    "birth_date": "REDACTED",
+    "phone": "REDACTED",
+    "additional_phone": null,
+    "sex_id": 1,
+    "edit_order": null,
+    "send_email": 0,
+    "send_sms": 0,
+    "club_accept": 1,
+    "area_id": 51,
+    "name": "REDACTED",
+    "orders": [],
+    "cards": {
+      "277915": {
+        "id": 277915,
+        "expiration_month": "07",
+        "expiration_year": "2026",
+        "last_digits": "000000",
+        "card_type": "1",
+        "is_club": 0,
+        "is_direct": 0
+      },
+      "1605204": {
+        "id": 1605204,
+        "expiration_month": "11",
+        "expiration_year": "2030",
+        "last_digits": "000000",
+        "card_type": "1",
+        "is_club": 0,
+        "is_direct": 0
+      }
+    },
+    "addresses": {
+      "16450": {
+        "id": 16450,
+        "apartment": "REDACTED",
+        "area": null,
+        "area_id": null,
+        "city": "REDACTED",
+        "city_id": 93,
+        "default": 1,
+        "entrance": null,
+        "floor": "REDACTED",
+        "name": "REDACTED",
+        "store_id": null,
+        "street": "REDACTED",
+        "street_id": 115722,
+        "street_number": "REDACTED",
+        "zip": null
+      }
+    },
+    "features": [],
+    "coupons": {}
+  },
+  "deliveryTimesCustomer": {
+    "id": 16138234,
+    "customer_id": 77577,
+    "order_id": null,
+    "strip_id": 197,
+    "address": {
+      "id": 16450,
+      "apartment": "REDACTED",
+      "area": null,
+      "area_id": null,
+      "city": "REDACTED",
+      "city_id": 93,
+      "default": 1,
+      "entrance": null,
+      "floor": "REDACTED",
+      "name": "REDACTED",
+      "store_id": null,
+      "street": "REDACTED",
+      "street_id": 115722,
+      "street_number": "REDACTED",
+      "zip": null
+    },
+    "hour": "12:00 - 14:00",
+    "supply_date": "2026-11-23 12:00:00",
+    "supply_date_no_time": "2026-11-23",
+    "order_until_hour": "2026-11-23 08:00:00",
+    "expires_at": null,
+    "name": "REDACTED",
+    "price": 35.9,
+    "area_id": "51",
+    "store_id": "412",
+    "deleted_at": null,
+    "created_at": "2026-11-20T10:27:04.000000Z",
+    "updated_at": "2026-11-20T10:27:04.000000Z"
+  },
+  "orderTokens": [],
+  "order": null,
+  "cart": {
+    "uid": 77577,
+    "updated_at": "2026-11-20 20:49:37",
+    "last_update": 1795200577,
+    "items": {
+      "3": 0.5,
+      "3025": 2
+    }
+  },
+  "shopLists": []
+}

@@ -1,0 +1,192 @@
+{
+  "success": true,
+  "data": {
+    "data": {
+      "current_page": 1,
+      "data": [
+        {
+          "id": 9425361,
+          "site_id": 1,
+          "status_api": "canceled",
+          "final_price": 43.1,
+          "supply_at": "2026-11-26 12:00:00",
+          "from_hour": "12:00:00",
+          "to_hour": "14:00:00",
+          "created_at": "2026-11-20T10:22:24.000000Z",
+          "items": [3025, 164854],
+          "supply": {
+            "id": 7561744,
+            "order_id": 9425361,
+            "area_id": 51,
+            "area": null,
+            "city_id": 93,
+            "city": "REDACTED",
+            "street_id": 115722,
+            "street": "REDACTED",
+            "street_number": "REDACTED",
+            "structure_id": null,
+            "apartment": 0,
+            "entrance": null,
+            "floor": 0,
+            "elevator": null,
+            "default": null,
+            "self_pick_up": null,
+            "name": "REDACTED",
+            "zip": null,
+            "created_at": "2026-11-20T10:22:25.000000Z",
+            "updated_at": "2026-11-20T10:22:25.000000Z",
+            "is_old_order": 0
+          },
+          "token": [
+            {
+              "amount": "0.1",
+              "last_digits": "0000",
+              "order_id": 9425361,
+              "type": "CreditCard"
+            }
+          ]
+        },
+        {
+          "id": 5685662,
+          "site_id": 1,
+          "status_api": "done",
+          "final_price": 526.2,
+          "supply_at": "2023-09-29 12:00:00",
+          "from_hour": "12:00:00",
+          "to_hour": "14:00:00",
+          "created_at": "2023-09-28T17:51:36.000000Z",
+          "items": [3, 6, 35, 36, 166, 2977, 3523, 7265],
+          "supply": {
+            "id": 3822105,
+            "order_id": 5685662,
+            "area_id": 51,
+            "area": null,
+            "city_id": 93,
+            "city": "REDACTED",
+            "street_id": 115722,
+            "street": "REDACTED",
+            "street_number": "REDACTED",
+            "structure_id": null,
+            "apartment": 0,
+            "entrance": null,
+            "floor": 0,
+            "elevator": null,
+            "default": null,
+            "self_pick_up": null,
+            "name": "REDACTED",
+            "zip": null,
+            "created_at": "2023-09-28T17:51:36.000000Z",
+            "updated_at": "2023-09-28T17:51:36.000000Z",
+            "is_old_order": 0
+          },
+          "token": [
+            {
+              "amount": "0.1",
+              "last_digits": "0000",
+              "order_id": 5685662,
+              "type": "CreditCard"
+            }
+          ]
+        },
+        {
+          "id": 5409482,
+          "site_id": 1,
+          "status_api": "done",
+          "final_price": 711.35,
+          "supply_at": "2023-07-21 12:00:00",
+          "from_hour": "12:00:00",
+          "to_hour": "14:00:00",
+          "created_at": "2023-07-19T15:58:40.000000Z",
+          "items": [3, 6, 230, 280, 2026, 2977, 4718, 5165],
+          "supply": {
+            "id": 3545973,
+            "order_id": 5409482,
+            "area_id": 51,
+            "area": null,
+            "city_id": 93,
+            "city": "REDACTED",
+            "street_id": 115722,
+            "street": "REDACTED",
+            "street_number": "REDACTED",
+            "structure_id": null,
+            "apartment": 0,
+            "entrance": null,
+            "floor": 0,
+            "elevator": null,
+            "default": null,
+            "self_pick_up": null,
+            "name": "REDACTED",
+            "zip": null,
+            "created_at": "2023-07-19T15:58:41.000000Z",
+            "updated_at": "2023-07-19T15:58:41.000000Z",
+            "is_old_order": 0
+          },
+          "token": [
+            {
+              "amount": "0.1",
+              "last_digits": "0000",
+              "order_id": 5409482,
+              "type": "CreditCard"
+            }
+          ]
+        }
+      ],
+      "first_page_url": "https://www-api.rami-levy.co.il/api/v3/site/orders?page=1",
+      "from": 1,
+      "last_page": 5,
+      "last_page_url": "https://www-api.rami-levy.co.il/api/v3/site/orders?page=5",
+      "links": [
+        {
+          "url": null,
+          "label": "&laquo; הקודם",
+          "page": null,
+          "active": false
+        },
+        {
+          "url": "https://www-api.rami-levy.co.il/api/v3/site/orders?page=1",
+          "label": "1",
+          "page": 1,
+          "active": true
+        },
+        {
+          "url": "https://www-api.rami-levy.co.il/api/v3/site/orders?page=2",
+          "label": "2",
+          "page": 2,
+          "active": false
+        },
+        {
+          "url": "https://www-api.rami-levy.co.il/api/v3/site/orders?page=3",
+          "label": "3",
+          "page": 3,
+          "active": false
+        },
+        {
+          "url": "https://www-api.rami-levy.co.il/api/v3/site/orders?page=4",
+          "label": "4",
+          "page": 4,
+          "active": false
+        },
+        {
+          "url": "https://www-api.rami-levy.co.il/api/v3/site/orders?page=5",
+          "label": "5",
+          "page": 5,
+          "active": false
+        },
+        {
+          "url": "https://www-api.rami-levy.co.il/api/v3/site/orders?page=2",
+          "label": "הבא &raquo;",
+          "page": 2,
+          "active": false
+        }
+      ],
+      "next_page_url": "https://www-api.rami-levy.co.il/api/v3/site/orders?page=2",
+      "path": "https://www-api.rami-levy.co.il/api/v3/site/orders",
+      "per_page": 6,
+      "prev_page_url": null,
+      "to": 6,
+      "total": 27
+    },
+    "editOrderId": null
+  },
+  "message": "orders retrieved successfully."
+}

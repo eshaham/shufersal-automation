@@ -1,0 +1,275 @@
+{
+  "status": 200,
+  "total": 4,
+  "data": [
+    {
+      "full_desc": "",
+      "price": {
+        "price": 35.9
+      },
+      "prop": {
+        "unit": null,
+        "sw_shakil": 0,
+        "by_kilo": 0,
+        "by_kilo_content": 1,
+        "status": 2
+      },
+      "id": 164854,
+      "multiplication": 1,
+      "department": null,
+      "barcode": 7290000000091,
+      "slug": "דמי-משלוח-אתר-אינטרנט",
+      "group": {
+        "name": "הכנסות נלוות",
+        "id": 310,
+        "sort": 3,
+        "slug": "הכנסות-נלוות"
+      },
+      "images": {
+        "small": "/product/7290000000091/164854/medium.jpg",
+        "original": "/product/7290000000091/164854/large.jpg",
+        "trim": "/product/7290000000091/trim.jpg",
+        "transparent": null,
+        "gallery": []
+      },
+      "department_id": 85,
+      "subGroup": {
+        "name": "הכנסות נלוות אתר",
+        "id": 638,
+        "sort": 0,
+        "slug": "הכנסות-נלוות-אתר"
+      },
+      "available_in": [
+        125, 179, 279, 290, 306, 331, 411, 412, 1197, 1198, 1214, 1220, 1221,
+        1225, 1226, 1306, 1307, 1314, 1323, 1329, 1330, 1332, 1333, 1357, 1378,
+        1389
+      ],
+      "gs": {
+        "BrandName": "",
+        "Product_Description_English": "",
+        "Country_of_Origin": null
+      },
+      "sale": [
+        {
+          "code": 910368957,
+          "sw_kefel": 0,
+          "deleted_by": "COMAX",
+          "created_at": "2026-05-04T09:53:19.000000Z",
+          "cmt": 1,
+          "type": 1,
+          "max_in_doc": 0,
+          "updated_at": "2026-08-24T10:51:43.000000Z",
+          "approved_at": null,
+          "k_scm": null,
+          "from": "2026-05-04 00:00:00",
+          "id": 788960,
+          "scm": 29.9,
+          "k_cmt": null,
+          "k_acz_dis": null,
+          "active": 1,
+          "label": "דמי משלוח ב-29.90 ש\"ח לחברי אשראי\n1 ב 29.9 ₪",
+          "is_wallet": 0,
+          "deleted_at": null,
+          "is_personal": 0,
+          "name": "דמי משלוח ב-29.90 ש\"ח לחברי אשראי",
+          "to": "2026-12-31 23:59:59",
+          "is_whole_cart": 0,
+          "pending_approval": 0,
+          "is_club": 1
+        }
+      ],
+      "mainImage": 0,
+      "group_id": 310,
+      "name": "דמי משלוח - אתר אינטרנט",
+      "site_id": 1,
+      "sub_group_id": 638,
+      "short_desc": "",
+      "is360": 0,
+      "has_coupon": false
+    },
+    {
+      "full_desc": "",
+      "price": {
+        "price": 7.9
+      },
+      "prop": {
+        "unit": 0,
+        "sw_shakil": 1,
+        "by_kilo": 1,
+        "by_kilo_content": 0,
+        "status": 2
+      },
+      "id": 3,
+      "multiplication": 0.5,
+      "department": {
+        "name": "פירות ירקות ופיצוחים",
+        "id": 49,
+        "sort": 10,
+        "slug": "פירות-וירקות"
+      },
+      "barcode": 101,
+      "slug": "מלפפון",
+      "group": {
+        "name": "ירקות",
+        "id": 197,
+        "sort": 0,
+        "slug": "ירקות"
+      },
+      "images": {
+        "small": "/product/101/3/medium.jpg",
+        "original": "/product/101/3/large.jpg",
+        "trim": "/product/101/trim.jpg",
+        "transparent": "/product/101/transparent.png",
+        "gallery": []
+      },
+      "department_id": 49,
+      "subGroup": {
+        "name": "ירקות טריים",
+        "id": 320,
+        "sort": 0,
+        "slug": "ירקות-טריים"
+      },
+      "available_in": [
+        82, 125, 179, 279, 290, 306, 331, 411, 412, 1197, 1198, 1214, 1220,
+        1221, 1225, 1226, 1306, 1307, 1314, 1323, 1329, 1330, 1332, 1333, 1357,
+        1378, 1389, 1401
+      ],
+      "gs": {
+        "BrandName": "",
+        "Product_Description_English": "",
+        "Country_of_Origin": null
+      },
+      "sale": [],
+      "mainImage": 0,
+      "group_id": 197,
+      "name": "מלפפון",
+      "site_id": 1,
+      "sub_group_id": 320,
+      "short_desc": "",
+      "is360": 0,
+      "has_coupon": false
+    },
+    {
+      "full_desc": "",
+      "price": {
+        "price": 7.1
+      },
+      "prop": {
+        "unit": 0,
+        "sw_shakil": 0,
+        "by_kilo": 0,
+        "by_kilo_content": 0,
+        "status": 2
+      },
+      "id": 419939,
+      "multiplication": 1,
+      "department": {
+        "name": "חלב ביצים וסלטים",
+        "id": 50,
+        "sort": 20,
+        "slug": "חלב-ביצים-וסלטים"
+      },
+      "barcode": 7290001794852,
+      "slug": "חלב-טרי-לי-רמילוי",
+      "group": {
+        "name": "חלב",
+        "id": 198,
+        "sort": 0,
+        "slug": "חלב"
+      },
+      "images": {
+        "small": "/product/7290001794852/small.jpg",
+        "original": "/product/7290001794852/large.jpg",
+        "trim": "/product/7290001794852/trim.jpg",
+        "transparent": null,
+        "gallery": []
+      },
+      "department_id": 50,
+      "subGroup": {
+        "name": "חלב טרי",
+        "id": 22,
+        "sort": 0,
+        "slug": "חלב-טרי"
+      },
+      "available_in": [
+        82, 179, 279, 290, 306, 331, 412, 1197, 1198, 1214, 1221, 1225, 1226,
+        1306, 1307, 1314, 1323, 1329, 1330, 1332, 1333, 1378, 1389
+      ],
+      "gs": {
+        "BrandName": "רמי לוי שיווק השקמה ",
+        "Product_Description_English": "",
+        "Country_of_Origin": "IL"
+      },
+      "sale": [],
+      "mainImage": 1,
+      "group_id": 198,
+      "name": "חלב טרי 3% 1 ליטר רמי לוי",
+      "site_id": 1,
+      "sub_group_id": 22,
+      "short_desc": "",
+      "is360": 1,
+      "has_coupon": false
+    },
+    {
+      "full_desc": "",
+      "price": {
+        "price": 7.2
+      },
+      "prop": {
+        "unit": null,
+        "sw_shakil": 0,
+        "by_kilo": 0,
+        "by_kilo_content": 1058,
+        "status": 2
+      },
+      "id": 3025,
+      "multiplication": 1,
+      "department": {
+        "name": "חלב ביצים וסלטים",
+        "id": 50,
+        "sort": 20,
+        "slug": "חלב-ביצים-וסלטים"
+      },
+      "barcode": 7290004131074,
+      "slug": "חלב-תנובה-טרי-ל-קרטון-מהדרין",
+      "group": {
+        "name": "חלב",
+        "id": 198,
+        "sort": 0,
+        "slug": "חלב"
+      },
+      "images": {
+        "small": "/product/7290004131074/small.jpg",
+        "original": "/product/7290004131074/large.jpg",
+        "trim": "/product/7290004131074/trim.jpg",
+        "transparent": "/product/7290004131074/transparent.png",
+        "gallery": []
+      },
+      "department_id": 50,
+      "subGroup": {
+        "name": "חלב טרי",
+        "id": 22,
+        "sort": 0,
+        "slug": "חלב-טרי"
+      },
+      "available_in": [
+        82, 179, 290, 306, 331, 411, 412, 1197, 1198, 1220, 1221, 1225, 1306,
+        1307, 1314, 1323, 1329, 1330, 1332, 1333, 1389, 1401
+      ],
+      "gs": {
+        "BrandName": "תנובה",
+        "Product_Description_English": "",
+        "Country_of_Origin": "IL"
+      },
+      "sale": [],
+      "mainImage": 1,
+      "group_id": 198,
+      "name": "חלב תנובה 3% שומן 1 ל' קרטון בד\"צ",
+      "site_id": 1,
+      "sub_group_id": 22,
+      "short_desc": "",
+      "is360": 1,
+      "has_coupon": false
+    }
+  ]
+}
