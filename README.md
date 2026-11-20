@@ -202,6 +202,39 @@ Main methods:
 - `serialize()`: Serialize session data
 - `close()`: Close the session
 
+### RamiLevySession (experimental)
+
+`RamiLevySession` implements the same `GrocerySession` interface for Rami
+Levy over plain HTTP, with no browser. It needs a login token from Rami
+Levy's site, which logs in with an SMS code and a reCAPTCHA, so the library
+can't log in by itself. The token lasts 60 days.
+
+```typescript
+import { RamiLevySession, SellingMethod } from 'shufersal-automation';
+
+const session = new RamiLevySession({ token, customerId });
+await session.restore();
+const results = await session.searchProducts('חלב');
+await session.setCartItemQuantities([
+  {
+    productCode: results.results[0].code,
+    quantity: 1,
+    sellingMethod: SellingMethod.Unit,
+  },
+]);
+const slots = await session.getAvailableTimeSlots();
+await session.selectTimeSlot(slots[0]);
+```
+
+- Search, product lookup, orders, order details, cart and delivery slots work
+- `createOrder()` throws `RamiLevyPaymentRequiredError`: Rami Levy asks for the
+  card's CVV on every order, so placing an order needs a payment step that
+  isn't built yet
+- `performLogin()` throws `RamiLevyLoginRequiredError`, and so does any call
+  made with an expired token
+- `serialize()` stores the token and its expiry; restore it with
+  `RamiLevySession.fromSerialized()`
+
 ## Development
 
 ### Setup
@@ -233,6 +266,7 @@ src/
 ├── ShufersalBot.ts             # Shufersal bot and session classes
 ├── types.ts                    # Shufersal API types plus the normalized ones
 ├── ShufersalSessionError.ts    # Shufersal session error
+├── rami-levy/                  # Rami Levy session over HTTP (experimental)
 └── example/
     └── main.ts                 # Usage example
 ```

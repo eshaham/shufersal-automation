@@ -1,0 +1,141 @@
+{
+  "data": {
+    "id": 5685662,
+    "status_broadcast": 1,
+    "payment_type": "CreditCard",
+    "final_price": 526.2,
+    "delivery_price": 29.9,
+    "order_name": null,
+    "customer_name": "REDACTED",
+    "customer_phone": "REDACTED",
+    "customer_aditional_phone": null,
+    "supply_at": "2023-09-29 12:00:00",
+    "from_hour": "12:00:00",
+    "to_hour": "14:00:00",
+    "delivery_item_id": 164854,
+    "link_invoice": "https://sms.comax.co.il/G/C/REDACTED",
+    "order_c": "7492404",
+    "is_old_order": 0,
+    "is_club": 0,
+    "created_at": "2023-09-28T17:51:36.000000Z",
+    "site_id": 1,
+    "customer_id": 77577,
+    "status_api": "done",
+    "isCanUpdate": false,
+    "isCanCancel": false,
+    "supply": {
+      "id": 3822105,
+      "order_id": 5685662,
+      "area_id": 51,
+      "area": null,
+      "city_id": 93,
+      "city": "REDACTED",
+      "street_id": 115722,
+      "street": "REDACTED",
+      "street_number": "REDACTED",
+      "structure_id": null,
+      "apartment": 0,
+      "entrance": null,
+      "floor": 0,
+      "elevator": null,
+      "default": null,
+      "self_pick_up": null,
+      "name": "REDACTED",
+      "zip": null,
+      "created_at": "2023-09-28T17:51:36.000000Z",
+      "updated_at": "2023-09-28T17:51:36.000000Z",
+      "is_old_order": 0
+    },
+    "token": [
+      {
+        "id": 4831708,
+        "order_id": 5685662,
+        "type": "CreditCard",
+        "amount": "0.1",
+        "card_type": "1",
+        "expiration_month": "07",
+        "expiration_year": "26",
+        "last_digits": "0000",
+        "payments_number": 1,
+        "is_club": 0,
+        "complete_in_err": 0
+      }
+    ],
+    "notes": [
+      {
+        "order_id": 5685662,
+        "note_id": 4,
+        "slug": "delivery_person"
+      },
+      {
+        "order_id": 5685662,
+        "note_id": 1,
+        "slug": "shipping"
+      }
+    ],
+    "customer": {
+      "id": 77577,
+      "first_name": "REDACTED",
+      "last_name": "REDACTED"
+    },
+    "lines": [
+      {
+        "id": 168390614,
+        "item_id": 3,
+        "order_id": 5685662,
+        "name": "מלפפון",
+        "price": "4.9",
+        "quantity": 1,
+        "final_price": "4.9",
+        "final_price_club": "4.9",
+        "total_price": "4.9",
+        "department_id": 49,
+        "discount": "0",
+        "coupon_code": null
+      },
+      {
+        "id": 168390615,
+        "item_id": 6,
+        "order_id": 5685662,
+        "name": "פלפל אדום",
+        "price": "7.9",
+        "quantity": 0.5,
+        "final_price": "3.95",
+        "final_price_club": "3.95",
+        "total_price": "3.95",
+        "department_id": 49,
+        "discount": "0",
+        "coupon_code": null
+      },
+      {
+        "id": 168390616,
+        "item_id": 35,
+        "order_id": 5685662,
+        "name": "בננה",
+        "price": "6.9",
+        "quantity": 1,
+        "final_price": "6.9",
+        "final_price_club": "6.9",
+        "total_price": "6.9",
+        "department_id": 49,
+        "discount": "0",
+        "coupon_code": null
+      },
+      {
+        "id": 168390617,
+        "item_id": 36,
+        "order_id": 5685662,
+        "name": "אבוקדו",
+        "price": "7.9",
+        "quantity": 0.5,
+        "final_price": "3.95",
+        "final_price_club": "3.95",
+        "total_price": "3.95",
+        "department_id": 49,
+        "discount": "0",
+        "coupon_code": null
+      }
+    ]
+  },
+  "status": "200"
+}

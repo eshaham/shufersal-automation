@@ -1,0 +1,101 @@
+{
+  "status": 200,
+  "data": {
+    "2026-11-20": [
+      {
+        "storeId": 412,
+        "areaId": 51,
+        "stripId": 690,
+        "fromHour": "12:00",
+        "toHour": "14:00",
+        "date": "2026-11-20",
+        "day": 6,
+        "orderUntilHour": "07:00",
+        "active": false,
+        "message": {
+          "count": 0,
+          "id": null,
+          "message": null,
+          "type": "strip"
+        },
+        "deliveryCost": 35.9,
+        "deliveryCostId": 1,
+        "activeUntilHour": false,
+        "areaAviliblityId": 271543
+      }
+    ],
+    "2026-11-22": [
+      {
+        "storeId": 412,
+        "areaId": 51,
+        "stripId": 197,
+        "fromHour": "12:00",
+        "toHour": "14:00",
+        "date": "2026-11-22",
+        "day": 1,
+        "orderUntilHour": "08:00",
+        "active": true,
+        "message": null,
+        "deliveryCost": 35.9,
+        "deliveryCostId": 1,
+        "activeUntilHour": true,
+        "areaAviliblityId": 271543
+      },
+      {
+        "storeId": 412,
+        "areaId": 51,
+        "stripId": 196,
+        "fromHour": "17:00",
+        "toHour": "19:00",
+        "date": "2026-11-22",
+        "day": 1,
+        "orderUntilHour": "12:00",
+        "active": false,
+        "message": {
+          "count": 5,
+          "id": null,
+          "message": null,
+          "type": "strip"
+        },
+        "deliveryCost": 35.9,
+        "deliveryCostId": 1,
+        "activeUntilHour": true,
+        "areaAviliblityId": 271543
+      }
+    ],
+    "2026-11-23": [
+      {
+        "storeId": 412,
+        "areaId": 51,
+        "stripId": 197,
+        "fromHour": "12:00",
+        "toHour": "14:00",
+        "date": "2026-11-23",
+        "day": 2,
+        "orderUntilHour": "08:00",
+        "active": true,
+        "message": null,
+        "deliveryCost": 35.9,
+        "deliveryCostId": 1,
+        "activeUntilHour": true,
+        "areaAviliblityId": 271543
+      },
+      {
+        "storeId": 412,
+        "areaId": 51,
+        "stripId": 196,
+        "fromHour": "17:00",
+        "toHour": "19:00",
+        "date": "2026-11-23",
+        "day": 2,
+        "orderUntilHour": "12:00",
+        "active": true,
+        "message": null,
+        "deliveryCost": 35.9,
+        "deliveryCostId": 1,
+        "activeUntilHour": true,
+        "areaAviliblityId": 271543
+      }
+    ]
+  }
+}
