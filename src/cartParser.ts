@@ -1,3 +1,5 @@
+import { parse } from 'node-html-parser';
+
 import {
   CartModification,
   CartMutationResult,
@@ -122,6 +124,39 @@ export function parseOrderCodeFromConfirmation(
     }
   }
   return null;
+}
+
+function parsePrice(text: string | undefined): number {
+  return parseFloat((text?.trim() || '0').replace(/[^\d.]/g, '')) || 0;
+}
+
+export function parseCartHtml(html: string): RawCartPage {
+  const root = parse(html, {
+    blockTextElements: { script: true, style: true, noscript: true },
+  });
+  const articles = root
+    .querySelectorAll('article[data-product-code]')
+    .map((el) => ({
+      productCode: el.getAttribute('data-product-code') ?? '',
+      quantity: parseFloat(el.getAttribute('data-entry-qty') ?? '0'),
+      entryNumber: parseInt(el.getAttribute('data-entry-number') ?? '0', 10),
+      itemPrice: parsePrice(el.querySelector('.miglog-prod-totalPrize')?.text),
+      itemDiscount: parsePrice(
+        el.querySelector('.miglog-prod-totalDiscount')?.text,
+      ),
+      isOutOfStock: el.classList.contains('miglog-cart-prod-notInStock'),
+    }));
+  const modificationsScript =
+    root
+      .querySelectorAll('script')
+      .map((script) => script.text)
+      .find((text) => text.includes('miglog.cart.modifications')) ?? null;
+
+  return {
+    articles,
+    bodyText: (root.querySelector('body') ?? root).text,
+    modificationsScript,
+  };
 }
 
 export function rawCartPageToCartMutationResult(

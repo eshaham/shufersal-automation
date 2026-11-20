@@ -1,5 +1,3 @@
-import assert from 'assert';
-
 import {
   AccountOrders,
   CartItemToAdd,
@@ -41,13 +39,27 @@ import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import timezone from 'dayjs/plugin/timezone';
 import utc from 'dayjs/plugin/utc';
-import puppeteer, { Browser, BrowserContext, Page } from 'puppeteer-core';
+import { parse as parseHtml } from 'node-html-parser';
+import puppeteer, {
+  Browser,
+  BrowserContext,
+  CookieData,
+  Page,
+} from 'puppeteer-core';
 
 import {
   parseOrderCodeFromConfirmation,
   RawCartPage,
   rawCartPageToCartMutationResult,
 } from './cartParser';
+import { CookieJar } from './CookieJar';
+import {
+  HttpBlockedError,
+  HttpStatusError,
+  HttpTransport,
+  LoginRedirectError,
+  ResponseFormat,
+} from './HttpTransport';
 import { extractPromotionInfo } from './promotions';
 import { parseReceipt } from './receiptParser';
 import { createSessionProxy } from './SessionProxy';
@@ -78,13 +90,17 @@ export class LoginTimeoutError extends Error {
   }
 }
 
+export type SessionTransport = 'http' | 'browser';
+
 interface ShufersalBotOptions {
-  browser?: Browser;
+  browser?: Browser | (() => Promise<Browser>);
   executablePath?: string;
   browserWSEndpoint?: string;
   headless?: boolean;
   chromiumArgs?: string[];
   takeScreenshotOnErrors?: boolean;
+  transport?: SessionTransport;
+  fetch?: typeof fetch;
 }
 
 interface ShufersalCredentials {
@@ -110,6 +126,9 @@ export const WEBAPP_URL = `${BASE_URL}/online/he`;
 
 const NAVIGATION_TIMEOUT = 30_000;
 const CART_PATH = '/cart/load?restoreCart=true';
+const SESSION_PAGE_PATH = '/wish-lists/main';
+const CSRF_REFRESH_PATH = '/timeSlot/preselection/getSelectedTimeslot';
+const CSRF_COOKIE = 'XSRF-TOKEN';
 
 function stripCategoryCodePrefix(
   category: ShufersalBase | null,
@@ -423,8 +442,6 @@ interface ApiRequestConfig {
   form?: Record<string, string>;
 }
 
-type ResponseFormat = 'json' | 'cart' | 'page';
-
 interface RawPage {
   url: string;
   html: string;
@@ -450,30 +467,130 @@ function isCheckoutEntryOutOfStock(entry: ShufersalCheckoutEntry): boolean {
   );
 }
 
+export interface BrowserPage {
+  context: BrowserContext;
+  page: Page;
+}
+
+export type BrowserPageFactory = () => Promise<BrowserPage>;
+
+export interface ShufersalSessionOptions {
+  cookies?: CookieData[];
+  transport?: SessionTransport;
+  fetch?: typeof fetch;
+}
+
 export class ShufersalSession {
   private csrfToken: string | undefined;
+  private browser: BrowserPage | undefined;
+  private browserOpening: Promise<BrowserPage> | undefined;
+  private transport: SessionTransport;
+  private readonly jar: CookieJar;
+  private readonly http: HttpTransport;
 
   constructor(
-    private context: BrowserContext,
-    private page: Page,
+    private openBrowser: BrowserPageFactory,
     private credentials: ShufersalCredentials,
+    options: ShufersalSessionOptions = {},
   ) {
-    page.on('framenavigated', (frame) => {
-      if (frame === page.mainFrame()) {
-        this.csrfToken = undefined;
-      }
+    this.transport = options.transport ?? 'http';
+    this.jar = new CookieJar(options.cookies);
+    this.http = new HttpTransport(this.jar, options.fetch);
+  }
+
+  get activeTransport(): SessionTransport {
+    return this.transport;
+  }
+
+  get hasBrowser(): boolean {
+    return this.browser !== undefined;
+  }
+
+  private get page(): Page {
+    if (!this.browser) {
+      throw new Error('No browser page is open for this session');
+    }
+    return this.browser.page;
+  }
+
+  private async ensureBrowser(): Promise<BrowserPage> {
+    if (this.browser) {
+      return this.browser;
+    }
+    this.browserOpening ??= (async () => {
+      const opened = await this.openBrowser();
+      opened.page.on('framenavigated', (frame) => {
+        if (frame === opened.page.mainFrame()) {
+          this.csrfToken = undefined;
+        }
+      });
+      this.browser = opened;
+      return opened;
+    })();
+    try {
+      return await this.browserOpening;
+    } finally {
+      this.browserOpening = undefined;
+    }
+  }
+
+  private async loadSessionPageInBrowser(): Promise<boolean> {
+    const { context, page } = await this.ensureBrowser();
+    const cookies = this.jar.toCookieData();
+    if (cookies.length > 0) {
+      await context.setCookie(...cookies);
+    }
+    await page.goto(`${WEBAPP_URL}${SESSION_PAGE_PATH}`, {
+      waitUntil: 'domcontentloaded',
+      timeout: NAVIGATION_TIMEOUT,
     });
+    return (
+      !page.url().includes('/login') &&
+      (await page.evaluate(
+        () => document.querySelector('.title-notAnonymous') !== null,
+      ))
+    );
   }
 
-  get browserContext(): BrowserContext {
-    return this.context;
+  private async syncCookiesFromBrowser(): Promise<void> {
+    if (this.browser) {
+      this.jar.replaceAll(await this.browser.context.cookies());
+    }
   }
 
-  get browserPage(): Page {
-    return this.page;
+  async restore(): Promise<void> {
+    if (this.transport === 'http') {
+      return;
+    }
+    if (!(await this.loadSessionPageInBrowser())) {
+      throw new SessionExpiredError();
+    }
+  }
+
+  private async switchToBrowser(): Promise<void> {
+    if (!(await this.loadSessionPageInBrowser())) {
+      await this.performLogin();
+    }
+    this.transport = 'browser';
+  }
+
+  private async withBrowserTransport<T>(work: () => Promise<T>): Promise<T> {
+    const previous = this.transport;
+    if (previous === 'http') {
+      await this.switchToBrowser();
+    }
+    try {
+      return await work();
+    } finally {
+      if (previous === 'http') {
+        await this.syncCookiesFromBrowser();
+        this.transport = 'http';
+      }
+    }
   }
 
   async performLogin(): Promise<void> {
+    await this.ensureBrowser();
     await this.page.goto(`${WEBAPP_URL}/login`, {
       waitUntil: 'domcontentloaded',
       timeout: NAVIGATION_TIMEOUT,
@@ -527,6 +644,7 @@ export class ShufersalSession {
       waitUntil: 'domcontentloaded',
       timeout: NAVIGATION_TIMEOUT,
     });
+    await this.syncCookiesFromBrowser();
   }
 
   async searchProducts(
@@ -830,6 +948,10 @@ export class ShufersalSession {
   }
 
   async createOrder(removeMissingItems: boolean): Promise<OrderInfo> {
+    return this.withBrowserTransport(() => this.placeOrder(removeMissingItems));
+  }
+
+  private async placeOrder(removeMissingItems: boolean): Promise<OrderInfo> {
     console.info('createOrder: Authenticating checkout');
     const checkoutConfig = await this.authenticateCheckout();
 
@@ -1012,160 +1134,115 @@ export class ShufersalSession {
   }
 
   async verifySessionAlive(): Promise<void> {
+    if (this.transport === 'http') {
+      await this.apiRequest({ method: 'GET', path: CSRF_REFRESH_PATH });
+      return;
+    }
     await this.page.evaluate(() => document.title);
   }
 
   async serialize(): Promise<SerializedSessionData> {
-    const cookies = await this.context.cookies();
-    return { cookies };
+    if (this.transport === 'browser') {
+      await this.syncCookiesFromBrowser();
+    }
+    return { cookies: this.jar.toCookieData() };
   }
 
   async getPromotionDetails(
     promotionCode: string,
   ): Promise<ScrapedPromotionDetails | null> {
-    const url = `${WEBAPP_URL}/promotionPopup/${promotionCode}`;
-
-    const details = await this.page.evaluate(async (promotionUrl) => {
-      const response = await fetch(promotionUrl, {
-        method: 'GET',
-        mode: 'cors',
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        return null;
-      }
-
-      const html = await response.text();
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(html, 'text/html');
-
-      const result: {
-        regularPrice?: number;
-        promotionalPrice?: number;
-        validUntil?: string;
-        eligibleProductCodes?: string[];
-      } = {};
-
-      const priceMatches = html.match(/(\d+\.?\d*)\s*₪/g);
-      if (priceMatches && priceMatches.length >= 2) {
-        result.regularPrice = parseFloat(priceMatches[0]);
-        result.promotionalPrice = parseFloat(priceMatches[1]);
-      }
-
-      const dateMatch = html.match(/עד\s*(\d{2}\/\d{2}\/\d{2,4})/);
-      if (dateMatch) {
-        const [day, month, year] = dateMatch[1].split('/');
-        const fullYear = year.length === 2 ? `20${year}` : year;
-        result.validUntil = `${fullYear}-${month}-${day}`;
-      }
-
-      const productElements = doc.querySelectorAll('[data-product-code]');
-      if (productElements.length > 0) {
-        result.eligibleProductCodes = Array.from(productElements)
-          .map((el) => el.getAttribute('data-product-code'))
-          .filter((code): code is string => code !== null);
-      }
-
-      return result;
-    }, url);
-
-    if (!details) {
+    const html = (await this.sendRequest(
+      { method: 'GET', path: `/promotionPopup/${promotionCode}` },
+      'text',
+    )) as string | undefined;
+    if (html === undefined) {
       return null;
     }
 
-    return {
-      regularPrice: details.regularPrice,
-      promotionalPrice: details.promotionalPrice,
-      validUntil: details.validUntil ? new Date(details.validUntil) : undefined,
-      eligibleProductCodes: details.eligibleProductCodes,
-    };
+    const result: ScrapedPromotionDetails = {};
+
+    const priceMatches = html.match(/(\d+\.?\d*)\s*₪/g);
+    if (priceMatches && priceMatches.length >= 2) {
+      result.regularPrice = parseFloat(priceMatches[0]);
+      result.promotionalPrice = parseFloat(priceMatches[1]);
+    }
+
+    const dateMatch = html.match(/עד\s*(\d{2}\/\d{2}\/\d{2,4})/);
+    if (dateMatch) {
+      const [day, month, year] = dateMatch[1].split('/');
+      const fullYear = year.length === 2 ? `20${year}` : year;
+      result.validUntil = new Date(`${fullYear}-${month}-${day}`);
+    }
+
+    const productCodes = parseHtml(html)
+      .querySelectorAll('[data-product-code]')
+      .map((el) => el.getAttribute('data-product-code'))
+      .filter((code): code is string => code !== undefined);
+    if (productCodes.length > 0) {
+      result.eligibleProductCodes = productCodes;
+    }
+
+    return result;
   }
 
   async getPromotionsByProduct(
     productCode: string,
   ): Promise<ScrapedPromotionDetails | null> {
-    const url = `${WEBAPP_URL}/promotions/addAndSave/${productCode}`;
-
-    const details = await this.page.evaluate(async (promotionUrl) => {
-      const response = await fetch(promotionUrl, {
-        method: 'GET',
-        mode: 'cors',
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        return null;
-      }
-
-      const text = await response.text();
-
-      if (!text) {
-        return null;
-      }
-
-      let data: {
-        htmlFragment?: string;
-        product?: {
-          code?: string;
-          price?: { value?: number };
-        };
-      };
-
-      try {
-        data = JSON.parse(text) as typeof data;
-      } catch {
-        return null;
-      }
-
-      const result: {
-        regularPrice?: number;
-        promotionalPrice?: number;
-        validUntil?: string;
-        eligibleProductCodes?: string[];
-      } = {};
-
-      if (data.product?.price?.value) {
-        result.regularPrice = data.product.price.value;
-      }
-
-      if (data.htmlFragment) {
-        const priceMatch = data.htmlFragment.match(/(\d+)\s*<span[^>]*>\s*₪/);
-        if (priceMatch) {
-          result.promotionalPrice = parseFloat(priceMatch[1]);
-        }
-
-        const dateMatch = data.htmlFragment.match(
-          /בתוקף עד\s*(\d{2})\/(\d{2})\/(\d{4})/,
-        );
-        if (dateMatch) {
-          const [, day, month, year] = dateMatch;
-          result.validUntil = `${year}-${month}-${day}`;
-        }
-      }
-
-      if (data.product?.code) {
-        result.eligibleProductCodes = [data.product.code.replace(/^P_/, '')];
-      }
-
-      return result;
-    }, url);
-
-    if (!details) {
+    const text = (await this.sendRequest(
+      { method: 'GET', path: `/promotions/addAndSave/${productCode}` },
+      'text',
+    )) as string | undefined;
+    if (!text) {
       return null;
     }
 
-    return {
-      regularPrice: details.regularPrice,
-      promotionalPrice: details.promotionalPrice,
-      validUntil: details.validUntil ? new Date(details.validUntil) : undefined,
-      eligibleProductCodes: details.eligibleProductCodes,
+    let data: {
+      htmlFragment?: string;
+      product?: {
+        code?: string;
+        price?: { value?: number };
+      };
     };
+    try {
+      data = JSON.parse(text) as typeof data;
+    } catch {
+      return null;
+    }
+
+    const result: ScrapedPromotionDetails = {};
+
+    if (data.product?.price?.value) {
+      result.regularPrice = data.product.price.value;
+    }
+
+    if (data.htmlFragment) {
+      const priceMatch = data.htmlFragment.match(/(\d+)\s*<span[^>]*>\s*₪/);
+      if (priceMatch) {
+        result.promotionalPrice = parseFloat(priceMatch[1]);
+      }
+
+      const dateMatch = data.htmlFragment.match(
+        /בתוקף עד\s*(\d{2})\/(\d{2})\/(\d{4})/,
+      );
+      if (dateMatch) {
+        const [, day, month, year] = dateMatch;
+        result.validUntil = new Date(`${year}-${month}-${day}`);
+      }
+    }
+
+    if (data.product?.code) {
+      result.eligibleProductCodes = [data.product.code.replace(/^P_/, '')];
+    }
+
+    return result;
   }
 
   async close(): Promise<void> {
+    if (!this.browser) {
+      return;
+    }
     try {
-      await this.context.close();
+      await this.browser.context.close();
     } catch (error) {
       if (
         error instanceof Error &&
@@ -1396,6 +1473,93 @@ export class ShufersalSession {
     config: ApiRequestConfig,
     responseFormat: ResponseFormat,
   ): Promise<unknown> {
+    if (this.transport === 'http') {
+      try {
+        return await this.httpRequest(config, responseFormat);
+      } catch (error) {
+        if (!(error instanceof HttpBlockedError)) {
+          throw error;
+        }
+        console.warn(
+          `[shufersal] ${error.message}; switching this session to the browser`,
+        );
+        await this.switchToBrowser();
+      }
+    }
+    return this.browserRequest(config, responseFormat);
+  }
+
+  private async httpCsrfToken(): Promise<string> {
+    let token = this.http.cookie(CSRF_COOKIE, WEBAPP_URL);
+    if (!token) {
+      await this.refreshHttpCsrfToken();
+      token = this.http.cookie(CSRF_COOKIE, WEBAPP_URL);
+    }
+    if (!token) {
+      throw new HttpBlockedError(
+        `Shufersal did not set the ${CSRF_COOKIE} cookie`,
+      );
+    }
+    return decodeURIComponent(token);
+  }
+
+  private async refreshHttpCsrfToken(): Promise<void> {
+    await this.http.send(
+      { method: 'GET', url: `${WEBAPP_URL}${CSRF_REFRESH_PATH}` },
+      'json',
+    );
+  }
+
+  private async httpRequest(
+    config: ApiRequestConfig,
+    responseFormat: ResponseFormat,
+    isRetry = false,
+  ): Promise<unknown> {
+    const { method, path, body, form } = config;
+    const startTime = performance.now();
+    let status: number | undefined;
+    try {
+      const csrfToken =
+        method === 'POST' ? await this.httpCsrfToken() : undefined;
+      const result = await this.http.send(
+        { method, url: `${WEBAPP_URL}${path}`, body, form, csrfToken },
+        responseFormat,
+      );
+      status = result.status;
+      return result.data;
+    } catch (error) {
+      if (error instanceof HttpStatusError) {
+        status = error.status;
+      }
+      if (error instanceof LoginRedirectError && !isRetry) {
+        await this.performLogin();
+        return await this.httpRequest(config, responseFormat, true);
+      }
+      if (
+        error instanceof HttpStatusError &&
+        error.status === 405 &&
+        method === 'POST'
+      ) {
+        if (isRetry) {
+          throw new HttpBlockedError(
+            `POST ${path.split('?')[0]} was rejected with 405 after refreshing the CSRF token`,
+          );
+        }
+        await this.refreshHttpCsrfToken();
+        return await this.httpRequest(config, responseFormat, true);
+      }
+      throw error;
+    } finally {
+      console.debug(
+        `[shufersal] http ${method} ${path.split('?')[0]} ${status === undefined ? 'failed' : String(status)} ${String(Math.round(performance.now() - startTime))}ms`,
+      );
+    }
+  }
+
+  private async browserRequest(
+    config: ApiRequestConfig,
+    responseFormat: ResponseFormat,
+  ): Promise<unknown> {
     const { method, path, body, form } = config;
 
     const makeRequest = async (): Promise<unknown> => {
@@ -1440,6 +1604,13 @@ export class ShufersalSession {
               if (location?.includes('/login')) {
                 throw new Error('REDIRECT_TO_LOGIN');
               }
+            }
+
+            if (responseFormat === 'text') {
+              return {
+                status: response.status,
+                data: response.ok ? await response.text() : undefined,
+              };
             }
 
             if (!response.ok) {
@@ -1546,7 +1717,7 @@ export class ShufersalSession {
         return result.data;
       } finally {
         console.debug(
-          `[shufersal] ${method} ${path.split('?')[0]} ${status === undefined ? 'failed' : String(status)} ${String(Math.round(performance.now() - startTime))}ms`,
+          `[shufersal] browser ${method} ${path.split('?')[0]} ${status === undefined ? 'failed' : String(status)} ${String(Math.round(performance.now() - startTime))}ms`,
         );
       }
     };
@@ -1564,6 +1735,7 @@ export class ShufersalSession {
 }
 export class ShufersalBot {
   private browser: Browser | undefined;
+  private browserConnecting: Promise<Browser> | undefined;
 
   constructor(private options: ShufersalBotOptions) {}
 
@@ -1572,11 +1744,19 @@ export class ShufersalBot {
     password: string,
     sessionData?: SerializedSessionData,
   ): Promise<ShufersalSession> {
-    const session = await this.initSession(username, password);
+    const session = new ShufersalSession(
+      () => this.openBrowserPage(),
+      { username, password },
+      {
+        cookies: sessionData?.cookies as CookieData[] | undefined,
+        transport: this.options.transport,
+        fetch: this.options.fetch,
+      },
+    );
 
     try {
       if (sessionData) {
-        await this.restoreSession(session, sessionData);
+        await session.restore();
       } else {
         await session.performLogin();
       }
@@ -1603,85 +1783,60 @@ export class ShufersalBot {
     return session;
   }
 
-  protected async initSession(
-    username: string,
-    password: string,
-  ): Promise<ShufersalSession> {
-    const context = await this.createContext();
+  protected async openBrowserPage(): Promise<BrowserPage> {
+    const browser = await this.getBrowser();
+    const context = await browser.createBrowserContext();
     const page = await context.newPage();
-
-    return new ShufersalSession(context, page, { username, password });
+    return { context, page };
   }
 
   async terminate(): Promise<void> {
     if (this.browser && !this.options.browser) {
       await this.browser.close();
-      this.browser = undefined;
     }
+    this.browser = undefined;
   }
 
   static parseReceipt(receiptText: string): ReceiptDetails {
     return parseReceipt(receiptText);
   }
 
-  private async initIfNeeded() {
-    if (!this.browser) {
-      if (this.options.browser) {
-        console.log('Using externally provided browser instance');
-        this.browser = this.options.browser;
-      } else if (this.options.browserWSEndpoint) {
-        console.log(
-          'Connecting to remote Chrome at:',
-          this.options.browserWSEndpoint,
-        );
-        this.browser = await puppeteer.connect({
-          browserWSEndpoint: this.options.browserWSEndpoint,
-        });
-      } else {
-        console.log(
-          'Launching local Chrome from:',
-          this.options.executablePath,
-        );
-        this.browser = await puppeteer.launch({
-          executablePath: this.options.executablePath,
-          headless: 'headless' in this.options ? this.options.headless : true,
-          args: this.options.chromiumArgs,
-        });
-      }
+  private async getBrowser(): Promise<Browser> {
+    if (this.browser) {
+      return this.browser;
+    }
+    this.browserConnecting ??= this.connectBrowser();
+    try {
+      this.browser = await this.browserConnecting;
+      return this.browser;
+    } finally {
+      this.browserConnecting = undefined;
     }
   }
 
-  private async createContext() {
-    await this.initIfNeeded();
-    assert(this.browser);
-
-    const context = await this.browser.createBrowserContext();
-    return context;
-  }
-
-  protected async restoreSession(
-    session: ShufersalSession,
-    sessionData: SerializedSessionData,
-  ): Promise<void> {
-    const context = session.browserContext;
-    const page = session.browserPage;
-
-    await context.setCookie(
-      ...(sessionData.cookies as Parameters<BrowserContext['setCookie']>),
-    );
-
-    await page.goto(`${WEBAPP_URL}/wish-lists/main`, {
-      waitUntil: 'domcontentloaded',
-      timeout: NAVIGATION_TIMEOUT,
+  private async connectBrowser(): Promise<Browser> {
+    const { browser } = this.options;
+    if (typeof browser === 'function') {
+      return browser();
+    }
+    if (browser) {
+      console.log('Using externally provided browser instance');
+      return browser;
+    }
+    if (this.options.browserWSEndpoint) {
+      console.log(
+        'Connecting to remote Chrome at:',
+        this.options.browserWSEndpoint,
+      );
+      return puppeteer.connect({
+        browserWSEndpoint: this.options.browserWSEndpoint,
+      });
+    }
+    console.log('Launching local Chrome from:', this.options.executablePath);
+    return puppeteer.launch({
+      executablePath: this.options.executablePath,
+      headless: 'headless' in this.options ? this.options.headless : true,
+      args: this.options.chromiumArgs,
     });
-
-    const isLoggedIn =
-      !page.url().includes('/login') &&
-      (await page.evaluate(
-        () => document.querySelector('.title-notAnonymous') !== null,
-      ));
-    if (!isLoggedIn) {
-      throw new SessionExpiredError();
-    }
   }
 }

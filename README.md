@@ -1,7 +1,8 @@
 <div align="center">
 
 <a href="https://salchik.co.il">
-<img src="docs/salchik-screenshot.png" width="300" alt="Salchik - Automated delivery booking"/>
+<img src="docs/salchik-screenshot.png" width="300"
+  alt="Salchik - Automated delivery booking"/>
 </a>
 
 _Looking for a ready-to-use solution? Try [Salchik.co.il](https://salchik.co.il)_
@@ -16,7 +17,11 @@ A TypeScript library for automating Shufersal online shopping using Puppeteer.
 
 ## Overview
 
-`shufersal-automation` provides a programmatic interface to interact with Shufersal's online shopping platform. It handles authentication, product search, cart management, order placement, and order history retrieval through a headless browser automation.
+`shufersal-automation` provides a programmatic interface to interact with
+Shufersal's online shopping platform. It handles authentication, product search,
+cart management, order placement, and order history retrieval over plain HTTP,
+opening a headless browser only to log in, to place an order, or as a fallback
+if plain HTTP is blocked. See [docs/http-transport.md](docs/http-transport.md).
 
 ## Features
 
@@ -120,7 +125,8 @@ const restoredSession = await bot.createSession(
 
 ### Using External Browser Instance
 
-You can provide your own Puppeteer browser instance, useful for sharing a browser across multiple sessions or integrating with services like Browserless:
+You can provide your own Puppeteer browser instance, useful for sharing a
+browser across multiple sessions or integrating with services like Browserless:
 
 ```typescript
 import puppeteer from 'puppeteer';
@@ -163,12 +169,17 @@ When using an external browser:
 
 Constructor options:
 
-- `browser`: Externally provided Puppeteer browser instance (optional)
+- `browser`: Externally provided Puppeteer browser instance, or a function that
+  returns one when a session first needs a browser (optional)
 - `executablePath`: Path to Chrome/Chromium executable
 - `browserWSEndpoint`: WebSocket endpoint for remote Chrome instance
 - `headless`: Run browser in headless mode (default: true)
 - `chromiumArgs`: Additional Chromium launch arguments
 - `takeScreenshotOnErrors`: Capture screenshots on errors (default: false)
+- `transport`: `'http'` (default) sends requests from Node and falls back to
+  the browser if blocked; `'browser'` sends every request from a browser page
+- `fetch`: `fetch` implementation for HTTP mode, for pointing it at a test
+  server (optional)
 
 ### ShufersalSession
 
