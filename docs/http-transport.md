@@ -38,6 +38,8 @@ reads it from the jar and never loads a page for it.
   new session gets a fresh one and a fresh `XSRF-TOKEN`, without logging in
   again (the long-lived `accjwt` cookie covers that).
 - A wrong or stale token gets `405 Method Not Allowed` and changes nothing.
+- A server session expires after 15 to 30 minutes without requests: a token
+  still worked after 15 idle minutes and got `405` after 30.
 - On a 405, the session sends one GET
   (`/timeSlot/preselection/getSelectedTimeslot`) to pick up the current token
   and retries the POST once.
