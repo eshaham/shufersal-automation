@@ -19,9 +19,10 @@ A TypeScript library for automating Shufersal online shopping using Puppeteer.
 
 `shufersal-automation` provides a programmatic interface to interact with
 Shufersal's online shopping platform. It handles authentication, product search,
-cart management, order placement, and order history retrieval over plain HTTP,
-opening a headless browser only to log in, to place an order, or as a fallback
-if plain HTTP is blocked. See [docs/http-transport.md](docs/http-transport.md).
+cart management, order placement, and order history retrieval. With
+`transport: 'http'` it works over plain HTTP, opening a headless browser only to
+log in, to place an order, or as a fallback if plain HTTP is blocked. See
+[docs/http-transport.md](docs/http-transport.md).
 
 ## Features
 
@@ -176,8 +177,8 @@ Constructor options:
 - `headless`: Run browser in headless mode (default: true)
 - `chromiumArgs`: Additional Chromium launch arguments
 - `takeScreenshotOnErrors`: Capture screenshots on errors (default: false)
-- `transport`: `'http'` (default) sends requests from Node and falls back to
-  the browser if blocked; `'browser'` sends every request from a browser page
+- `transport`: `'browser'` (default) sends every request from a browser page;
+  `'http'` sends requests from Node and falls back to the browser if blocked
 - `fetch`: `fetch` implementation for HTTP mode, for pointing it at a test
   server (optional)
 
