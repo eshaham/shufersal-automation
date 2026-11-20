@@ -3,6 +3,8 @@ import {
   CartMutationResult,
   ExistingCartItem,
   SellingMethod,
+  ShufersalCheckoutEntry,
+  ShufersalComposedCheckout,
   ShufersalOrderEntry,
   ShufersalSellingMethod,
 } from './types';
@@ -123,6 +125,117 @@ describe('setCartItemQuantities', () => {
       expect.objectContaining({ productCode: 'P_3', entry: 2 }),
     ]);
     expect(result.items).toEqual(afterRemove);
+  });
+});
+
+function checkoutEntry(
+  productCode: string,
+  entryNumber: number,
+  outOfStock: boolean,
+): ShufersalCheckoutEntry {
+  return {
+    entryNumber,
+    outOfStock,
+    product: {
+      code: productCode,
+      stock: {
+        stockLevelStatus: { code: outOfStock ? 'outOfStock' : 'inStock' },
+      },
+    },
+  } as unknown as ShufersalCheckoutEntry;
+}
+
+function composedCheckout(
+  entries: ShufersalCheckoutEntry[],
+): ShufersalComposedCheckout {
+  return { directCart: { entries } };
+}
+
+type RemoveOutOfStock = (
+  entries: ShufersalCheckoutEntry[],
+) => Promise<ShufersalComposedCheckout>;
+
+function stubCheckout(
+  session: ShufersalSession,
+  checkout: ShufersalComposedCheckout,
+) {
+  const getComposedCheckout = jest.fn().mockResolvedValue(checkout);
+  (
+    session as unknown as {
+      getComposedCheckout: () => Promise<ShufersalComposedCheckout>;
+    }
+  ).getComposedCheckout = getComposedCheckout;
+  return getComposedCheckout;
+}
+
+function removeOutOfStock(
+  session: ShufersalSession,
+  entries: ShufersalCheckoutEntry[],
+) {
+  const method = (
+    session as unknown as { removeOutOfStockCheckoutEntries: RemoveOutOfStock }
+  ).removeOutOfStockCheckoutEntries;
+  return method.call(session, entries);
+}
+
+describe('removeOutOfStockCheckoutEntries', () => {
+  it("removes with the cart's entry number, not checkout's", async () => {
+    const { session, cartRequest } = createSession([
+      cartResult([cartItem('P_1', 0), cartItem('P_OOS', 41)]),
+      cartResult([cartItem('P_1', 0)]),
+    ]);
+    const afterRemoval = composedCheckout([checkoutEntry('P_1', 0, false)]);
+    stubCheckout(session, afterRemoval);
+
+    const checkout = await removeOutOfStock(session, [
+      checkoutEntry('P_OOS', 79, true),
+    ]);
+
+    expect(cartRequest).toHaveBeenCalledTimes(2);
+    expect(cartRequest.mock.calls[1][0].path.startsWith('/cart/modify?')).toBe(
+      true,
+    );
+    expect(cartRequest.mock.calls[1][0].body).toEqual([
+      expect.objectContaining({ productCode: 'P_OOS', entry: 41 }),
+    ]);
+    expect(checkout).toBe(afterRemoval);
+  });
+
+  it('throws without removing when a checkout line is not in the cart', async () => {
+    const { session, cartRequest } = createSession([
+      cartResult([cartItem('P_1', 0)]),
+    ]);
+    const getComposedCheckout = stubCheckout(session, composedCheckout([]));
+    const consoleError = jest
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
+
+    await expect(
+      removeOutOfStock(session, [checkoutEntry('P_GIFT', 79, true)]),
+    ).rejects.toThrow(
+      'Out-of-stock checkout items are not in the cart: P_GIFT',
+    );
+
+    expect(cartRequest).toHaveBeenCalledTimes(1);
+    expect(getComposedCheckout).not.toHaveBeenCalled();
+    expect(consoleError).toHaveBeenCalledWith(
+      expect.stringContaining('"entryNumber":79'),
+    );
+    consoleError.mockRestore();
+  });
+
+  it('throws when checkout still has out-of-stock items after removal', async () => {
+    const { session } = createSession([
+      cartResult([cartItem('P_OOS', 41)]),
+      cartResult([]),
+    ]);
+    stubCheckout(session, composedCheckout([checkoutEntry('P_OOS', 79, true)]));
+
+    await expect(
+      removeOutOfStock(session, [checkoutEntry('P_OOS', 79, true)]),
+    ).rejects.toThrow(
+      'Checkout still has out-of-stock items after removing them: P_OOS',
+    );
   });
 });
 
