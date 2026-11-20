@@ -85,6 +85,7 @@ export interface RamiLevyAddress {
 
 export interface RamiLevyDeliveryReservation {
   id: number;
+  address?: RamiLevyAddress | null;
   order_id: number | null;
   strip_id: number;
   hour: string;
@@ -96,19 +97,75 @@ export interface RamiLevyDeliveryReservation {
   store_id: string;
 }
 
+export interface RamiLevyCard {
+  id: number;
+  expiration_month: string;
+  expiration_year: string;
+  last_digits: string;
+  card_type: string;
+  is_club: number;
+  is_direct: number;
+}
+
+export interface RamiLevyOrderToken {
+  id: number;
+  type: string;
+  amount: string;
+  card_id?: number | null;
+  order_id?: number | null;
+}
+
 export interface RamiLevyCustomer {
   id: number;
   name: string;
   email: string;
+  phone: string | null;
+  additional_phone: string | null;
   store_id: string | null;
+  area_id: number | null;
   edit_order: number | null;
   addresses: Record<string, RamiLevyAddress>;
+  cards: Record<string, RamiLevyCard> | null;
 }
 
 export interface RamiLevyCustomerResponse {
   user: RamiLevyCustomer;
   deliveryTimesCustomer: RamiLevyDeliveryReservation | null;
+  orderTokens: RamiLevyOrderToken[] | null;
   cart: { items: Record<string, number> } | null;
+}
+
+export interface RamiLevyCvvSuccessData {
+  token: string;
+  total: string;
+  cardIdDB: number;
+  cardId: string;
+  creditType: string;
+  expirationMonth: string;
+  expirationYear: string;
+  lastDigits: string;
+  paymentsNumber: number;
+  IsClubCC: string;
+  CompleteInErr?: string;
+}
+
+export interface RamiLevyTokenLoginResponse {
+  status: string | number;
+  data: string | null;
+}
+
+export interface RamiLevyIframeUrlResponse {
+  url?: string;
+}
+
+export interface RamiLevyOrderTokenResponse {
+  data: RamiLevyOrderToken;
+  message?: string;
+}
+
+export interface RamiLevyPlaceOrderResponse {
+  status: string | number;
+  data?: { order_id?: number } | null;
 }
 
 export interface RamiLevyStrip {

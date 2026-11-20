@@ -227,9 +227,21 @@ await session.selectTimeSlot(slots[0]);
 ```
 
 - Search, product lookup, orders, order details, cart and delivery slots work
-- `createOrder()` throws `RamiLevyPaymentRequiredError`: Rami Levy asks for the
-  card's CVV on every order, so placing an order needs a payment step that
-  isn't built yet
+- Rami Levy asks for the card's CVV on every order, so placing one takes a
+  payment step:
+  1. `checkOrder()` runs Rami Levy's dry run on the cart, slot and address
+  2. `preparePayment()` returns the URL of the card company's CVV form, the
+     amount, and the origin its result message comes from
+  3. Show that form to the customer; it posts a `cvv-success` message
+  4. `registerPayment(message)` turns that message into a payment reference
+  5. `createOrder(false, payment)` places the order and empties the cart
+- `createOrder()` without a payment throws `RamiLevyPaymentRequiredError`,
+  unless an order is open for editing (`putOrderInUpdateMode()`): then it
+  updates that order with its existing payment
+- `discardPayment(payment)` deletes a payment that won't be used
+- Every CVV entry makes the card company text the customer a "complete your
+  registration" code. It also happens on Rami Levy's own site, and the code
+  isn't needed
 - `performLogin()` throws `RamiLevyLoginRequiredError`, and so does any call
   made with an expired token
 - `serialize()` stores the token and its expiry; restore it with

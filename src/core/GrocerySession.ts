@@ -65,3 +65,21 @@ export interface PromotionLookupSupport {
     productCode: string,
   ): Promise<ScrapedPromotionDetails | null>;
 }
+
+export interface PaymentForm {
+  url: string;
+  amount: number;
+  messageOrigin: string;
+  cardLastDigits?: string;
+}
+
+export interface PaymentReference {
+  id: string;
+  amount: number;
+}
+
+export interface InteractivePaymentSupport {
+  preparePayment(): Promise<PaymentForm>;
+  registerPayment(message: unknown): Promise<PaymentReference>;
+  discardPayment(payment: PaymentReference): Promise<void>;
+}
