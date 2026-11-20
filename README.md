@@ -223,12 +223,18 @@ npm install
 ```text
 src/
 ├── index.ts                    # Public API exports
-├── ShufersalBot.ts            # Main bot and session classes
-├── types.ts                   # TypeScript type definitions
-├── ShufersalSessionError.ts   # Custom error class
-├── SessionProxy.ts            # Session proxy for error handling
+├── core/                       # Code shared by every grocery chain
+│   ├── GrocerySession.ts       # Chain-neutral session interfaces
+│   ├── types.ts                # Normalized types (Product, CartState...)
+│   ├── HttpTransport.ts        # HTTP client: cookies, redirects, blocks
+│   ├── CookieJar.ts            # Cookie storage for HTTP sessions
+│   ├── SessionProxy.ts         # Screenshot-on-error session proxy
+│   └── SessionError.ts         # Base session error
+├── ShufersalBot.ts             # Shufersal bot and session classes
+├── types.ts                    # Shufersal API types plus the normalized ones
+├── ShufersalSessionError.ts    # Shufersal session error
 └── example/
-    └── main.ts                # Usage example
+    └── main.ts                 # Usage example
 ```
 
 ## Error Handling
@@ -237,7 +243,8 @@ The library provides specific error types:
 
 - `InvalidCredentialsError`: Thrown when login credentials are incorrect
 - `LoginTimeoutError`: Thrown when login process times out
-- `ShufersalSessionError`: Wraps errors with optional screenshot data
+- `ShufersalSessionError`: Wraps errors with optional screenshot data. It
+  extends `GrocerySessionError`, the chain-neutral base.
 
 ## License
 

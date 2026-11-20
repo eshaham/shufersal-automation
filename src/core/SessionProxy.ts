@@ -1,13 +1,22 @@
-import { ShufersalSession } from './ShufersalBot';
-import { ShufersalSessionError } from './ShufersalSessionError';
-
 type SessionMethod = (...args: unknown[]) => Promise<unknown>;
 
 const diagnosticMethods = new Set(['takeScreenshot', 'takePageContent']);
 
-export function createSessionProxy(
-  session: ShufersalSession,
-): ShufersalSession {
+export interface DiagnosableSession {
+  takeScreenshot(): Promise<Buffer>;
+  takePageContent(): Promise<string>;
+}
+
+export type SessionErrorFactory = (
+  error: Error,
+  screenshot?: Buffer,
+  pageContent?: string,
+) => Error;
+
+export function createSessionProxy<T extends DiagnosableSession>(
+  session: T,
+  createError: SessionErrorFactory,
+): T {
   return new Proxy(session, {
     get(target, prop, receiver) {
       const value = Reflect.get(target, prop, receiver) as unknown;
@@ -34,8 +43,7 @@ export function createSessionProxy(
             target.takePageContent(),
           ]);
 
-          throw new ShufersalSessionError(
-            error.message,
+          throw createError(
             error,
             screenshot.status === 'fulfilled' ? screenshot.value : undefined,
             pageContent.status === 'fulfilled' ? pageContent.value : undefined,

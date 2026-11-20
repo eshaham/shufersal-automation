@@ -9,6 +9,7 @@ import {
   ItemDetails,
   OrderDetails,
   OrderInfo,
+  OrderLookupOptions,
   OrderStatus,
   Product,
   PromotionInfo,
@@ -49,21 +50,29 @@ import puppeteer, {
 } from 'puppeteer-core';
 
 import {
+  parseCartHtml,
   parseOrderCodeFromConfirmation,
   RawCartPage,
   rawCartPageToCartMutationResult,
 } from './cartParser';
-import { CookieJar } from './CookieJar';
+import { CookieJar } from './core/CookieJar';
+import type {
+  GrocerySession,
+  OrderUpdateSupport,
+  PromotionLookupSupport,
+  ReceiptEmailSupport,
+} from './core/GrocerySession';
 import {
   HttpBlockedError,
+  ResponseFormat as HttpResponseFormat,
   HttpStatusError,
   HttpTransport,
+  HttpTransportOptions,
   LoginRedirectError,
-  ResponseFormat,
-} from './HttpTransport';
+} from './core/HttpTransport';
+import { createSessionProxy } from './core/SessionProxy';
 import { extractPromotionInfo } from './promotions';
 import { parseReceipt } from './receiptParser';
-import { createSessionProxy } from './SessionProxy';
 import { ShufersalSessionError } from './ShufersalSessionError';
 
 dayjs.extend(customParseFormat);
@@ -121,6 +130,13 @@ declare global {
     };
   }
 }
+
+type ResponseFormat = Exclude<HttpResponseFormat, 'html'> | 'cart';
+
+const SHUFERSAL_HTTP_OPTIONS: HttpTransportOptions = {
+  csrfHeaderName: 'csrftoken',
+  isLoginRedirect: (location) => location.includes('/login'),
+};
 
 export const BASE_URL = 'https://www.shufersal.co.il';
 export const WEBAPP_URL = `${BASE_URL}/online/he`;
@@ -479,10 +495,6 @@ export interface CartEntryToRemove {
   entryNumber: number;
 }
 
-export interface OrderLookupOptions {
-  detectUpdateMode?: boolean;
-}
-
 function isCheckoutEntryOutOfStock(entry: ShufersalCheckoutEntry): boolean {
   return (
     entry.outOfStock === true ||
@@ -503,7 +515,13 @@ export interface ShufersalSessionOptions {
   fetch?: typeof fetch;
 }
 
-export class ShufersalSession {
+export class ShufersalSession
+  implements
+    GrocerySession,
+    OrderUpdateSupport,
+    ReceiptEmailSupport,
+    PromotionLookupSupport
+{
   private csrfToken: string | undefined;
   private browser: BrowserPage | undefined;
   private browserOpening: Promise<BrowserPage> | undefined;
@@ -518,7 +536,11 @@ export class ShufersalSession {
   ) {
     this.transport = options.transport ?? 'browser';
     this.jar = new CookieJar(options.cookies);
-    this.http = new HttpTransport(this.jar, options.fetch);
+    this.http = new HttpTransport(
+      this.jar,
+      options.fetch,
+      SHUFERSAL_HTTP_OPTIONS,
+    );
   }
 
   get activeTransport(): SessionTransport {
@@ -1657,9 +1679,14 @@ export class ShufersalSession {
         method === 'POST' ? await this.httpCsrfToken() : undefined;
       const result = await this.http.send(
         { method, url: `${WEBAPP_URL}${path}`, body, form, csrfToken },
-        responseFormat,
+        responseFormat === 'cart' ? 'html' : responseFormat,
       );
       status = result.status;
+      if (responseFormat === 'cart') {
+        return typeof result.data === 'string'
+          ? parseCartHtml(result.data)
+          : undefined;
+      }
       return result.data;
     } catch (error) {
       if (error instanceof HttpStatusError) {
@@ -1904,7 +1931,16 @@ export class ShufersalBot {
     }
 
     if (this.options.takeScreenshotOnErrors) {
-      return createSessionProxy(session);
+      return createSessionProxy(
+        session,
+        (error, screenshot, pageContent) =>
+          new ShufersalSessionError(
+            error.message,
+            error,
+            screenshot,
+            pageContent,
+          ),
+      );
     }
 
     return session;

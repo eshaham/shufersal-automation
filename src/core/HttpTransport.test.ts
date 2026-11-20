@@ -33,7 +33,10 @@ function createTransport(responses: Response[]) {
   const jar = new CookieJar([
     { name: 'accjwt', value: 'jwt', domain: '.shufersal.co.il', path: '/' },
   ]);
-  const transport = new HttpTransport(jar, fetchMock as typeof fetch);
+  const transport = new HttpTransport(jar, fetchMock as typeof fetch, {
+    csrfHeaderName: 'csrftoken',
+    isLoginRedirect: (location) => location.includes('/login'),
+  });
   return { transport, fetchMock, jar };
 }
 
@@ -78,7 +81,7 @@ describe('HttpTransport', () => {
         body: [{ productCode: 'P_1' }],
         csrfToken: 'token',
       },
-      'cart',
+      'html',
     );
 
     const [, init] = fetchMock.mock.calls[0];
@@ -86,33 +89,79 @@ describe('HttpTransport', () => {
     expect(sentHeaders(fetchMock)['csrftoken']).toBe('token');
   });
 
-  it('parses cart HTML into articles', async () => {
+  it('returns the HTML of html responses', async () => {
+    const html =
+      '<html><body><article data-product-code="P_1"></article></body></html>';
     const { transport } = createTransport([
-      respond(
-        200,
-        '<html><body><article class="miglog-cart-prod" data-product-code="P_1" data-entry-qty="2" data-entry-number="0"><span class="miglog-prod-totalPrize">12.90 ₪</span></article></body></html>',
-        { 'content-type': 'text/html;charset=UTF-8' },
-      ),
+      respond(200, html, { 'content-type': 'text/html;charset=UTF-8' }),
     ]);
 
     const result = await transport.send(
       { method: 'GET', url: `${BASE}/cart/load?restoreCart=true` },
-      'cart',
+      'html',
     );
 
-    expect(result.data).toMatchObject({
-      articles: [
-        {
-          productCode: 'P_1',
-          quantity: 2,
-          entryNumber: 0,
-          itemPrice: 12.9,
-          itemDiscount: 0,
-          isOutOfStock: false,
-        },
-      ],
-      modificationsScript: null,
-    });
+    expect(result).toEqual({ status: 200, data: html });
+  });
+
+  it('returns no data for html requests answered with JSON', async () => {
+    const { transport } = createTransport([
+      respond(200, '{}', { 'content-type': 'application/json' }),
+    ]);
+
+    const result = await transport.send(
+      { method: 'GET', url: `${BASE}/cart/load` },
+      'html',
+    );
+
+    expect(result).toEqual({ status: 200, data: undefined });
+  });
+
+  it('sends per-request headers and the CSRF token under the configured name', async () => {
+    const fetchMock = jest
+      .fn<Promise<Response>, Parameters<typeof fetch>>()
+      .mockResolvedValue(
+        respond(200, '{}', { 'content-type': 'application/json' }),
+      );
+    const transport = new HttpTransport(
+      new CookieJar(),
+      fetchMock as typeof fetch,
+      { csrfHeaderName: 'x-csrf-token' },
+    );
+
+    await transport.send(
+      {
+        method: 'DELETE',
+        url: 'https://api.example.com/cart',
+        csrfToken: 'token',
+        headers: { EcomToken: 'jwt', Locale: 'he' },
+      },
+      'json',
+    );
+
+    const headers = sentHeaders(fetchMock);
+    expect(fetchMock.mock.calls[0][1]?.method).toBe('DELETE');
+    expect(headers['x-csrf-token']).toBe('token');
+    expect(headers['csrftoken']).toBeUndefined();
+    expect(headers['EcomToken']).toBe('jwt');
+    expect(headers['Locale']).toBe('he');
+  });
+
+  it('does not treat redirects as logins without a login matcher', async () => {
+    const fetchMock = jest
+      .fn<Promise<Response>, Parameters<typeof fetch>>()
+      .mockResolvedValue(respond(302, '', { location: `${BASE}/login` }));
+    const transport = new HttpTransport(
+      new CookieJar(),
+      fetchMock as typeof fetch,
+    );
+
+    const error = await transport
+      .send({ method: 'GET', url: `${BASE}/my-account` }, 'json')
+      .catch((e: unknown) => e);
+
+    expect(error).not.toBeInstanceOf(LoginRedirectError);
+    expect((error as HttpStatusError).status).toBe(302);
   });
 
   it('stores cookies from every response', async () => {
@@ -185,7 +234,7 @@ describe('HttpTransport', () => {
     ]);
 
     await expect(
-      transport.send({ method: 'GET', url: `${BASE}/cart/load` }, 'cart'),
+      transport.send({ method: 'GET', url: `${BASE}/cart/load` }, 'html'),
     ).rejects.toBeInstanceOf(HttpBlockedError);
   });
 
@@ -202,7 +251,7 @@ describe('HttpTransport', () => {
       transport.send({ method: 'GET', url: `${BASE}/cart/load` }, 'json'),
     ).rejects.toBeInstanceOf(HttpBlockedError);
     await expect(
-      transport.send({ method: 'POST', url: `${BASE}/cart/addGrid` }, 'cart'),
+      transport.send({ method: 'POST', url: `${BASE}/cart/addGrid` }, 'html'),
     ).rejects.toBeInstanceOf(TypeError);
   });
 
@@ -212,7 +261,7 @@ describe('HttpTransport', () => {
     ]);
 
     const error = await transport
-      .send({ method: 'POST', url: `${BASE}/cart/addGrid` }, 'cart')
+      .send({ method: 'POST', url: `${BASE}/cart/addGrid` }, 'html')
       .catch((e: unknown) => e);
 
     expect(error).toBeInstanceOf(HttpStatusError);

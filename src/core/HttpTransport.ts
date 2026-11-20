@@ -1,4 +1,3 @@
-import { parseCartHtml } from './cartParser';
 import { CookieJar } from './CookieJar';
 
 export const HTTP_USER_AGENT =
@@ -7,21 +6,32 @@ export const HTTP_USER_AGENT =
 const MAX_REDIRECTS = 5;
 
 const BLOCK_PAGE_MAX_LENGTH = 20_000;
-const BLOCK_PAGE_MARKERS = [
+const DEFAULT_BLOCK_PAGE_MARKERS = [
   'The requested URL was rejected',
   'Request Rejected',
   '_Incapsula_Resource',
   'cf-chl-',
 ];
 
-export type ResponseFormat = 'json' | 'cart' | 'page' | 'text';
+export type ResponseFormat = 'json' | 'html' | 'page' | 'text';
+
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
 
 export interface HttpRequest {
-  method: 'GET' | 'POST';
+  method: HttpMethod;
   url: string;
   body?: unknown;
   form?: Record<string, string>;
   csrfToken?: string;
+  headers?: Record<string, string>;
+}
+
+export interface HttpTransportOptions {
+  userAgent?: string;
+  acceptLanguage?: string;
+  csrfHeaderName?: string;
+  isLoginRedirect?: (location: string) => boolean;
+  blockPageMarkers?: string[];
 }
 
 export class LoginRedirectError extends Error {
@@ -56,6 +66,7 @@ function looksBlocked(
   status: number,
   contentType: string,
   body: string,
+  markers: string[],
 ): boolean {
   if (status === 403 || status === 429) {
     return true;
@@ -63,7 +74,7 @@ function looksBlocked(
   return (
     contentType.includes('text/html') &&
     body.length < BLOCK_PAGE_MAX_LENGTH &&
-    BLOCK_PAGE_MARKERS.some((marker) => body.includes(marker))
+    markers.some((marker) => body.includes(marker))
   );
 }
 
@@ -78,6 +89,7 @@ export class HttpTransport {
   constructor(
     private readonly jar: CookieJar,
     private readonly fetchImpl: typeof fetch = fetch,
+    private readonly options: HttpTransportOptions = {},
   ) {}
 
   cookie(name: string, url: string): string | undefined {
@@ -115,7 +127,7 @@ export class HttpTransport {
         break;
       }
       const location = response.headers.get('location');
-      if (location?.includes('/login')) {
+      if (location && this.options.isLoginRedirect?.(location)) {
         await response.body?.cancel();
         throw new LoginRedirectError();
       }
@@ -135,7 +147,14 @@ export class HttpTransport {
     const text = await response.text();
     const contentType = response.headers.get('content-type') ?? '';
 
-    if (looksBlocked(response.status, contentType, text)) {
+    if (
+      looksBlocked(
+        response.status,
+        contentType,
+        text,
+        this.options.blockPageMarkers ?? DEFAULT_BLOCK_PAGE_MARKERS,
+      )
+    ) {
       throw new HttpBlockedError(
         `${request.method} ${url.pathname} looks blocked: ${String(response.status)} ${truncate(text, contentType).slice(0, 200)}`,
       );
@@ -155,12 +174,10 @@ export class HttpTransport {
       );
     }
 
-    if (format === 'cart') {
+    if (format === 'html') {
       return {
         status: response.status,
-        data: contentType.includes('text/html')
-          ? parseCartHtml(text)
-          : undefined,
+        data: contentType.includes('text/html') ? text : undefined,
       };
     }
 
@@ -193,9 +210,10 @@ export class HttpTransport {
     method: string,
   ): Record<string, string> {
     const headers: Record<string, string> = {
-      'user-agent': HTTP_USER_AGENT,
+      'user-agent': this.options.userAgent ?? HTTP_USER_AGENT,
       accept: 'application/json, text/plain, */*',
-      'accept-language': 'he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7',
+      'accept-language':
+        this.options.acceptLanguage ?? 'he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7',
       'content-type': request.form
         ? 'application/x-www-form-urlencoded; charset=UTF-8'
         : 'application/json',
@@ -204,9 +222,9 @@ export class HttpTransport {
     if (cookie) {
       headers['cookie'] = cookie;
     }
-    if (method === 'POST' && request.csrfToken) {
-      headers['csrftoken'] = request.csrfToken;
+    if (method !== 'GET' && request.csrfToken) {
+      headers[this.options.csrfHeaderName ?? 'csrftoken'] = request.csrfToken;
     }
-    return headers;
+    return { ...headers, ...request.headers };
   }
 }
