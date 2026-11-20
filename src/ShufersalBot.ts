@@ -1005,13 +1005,7 @@ export class ShufersalSession {
       console.info(
         `createOrder: Removing ${String(missingProductCodes.length)} out-of-stock items`,
       );
-      await this.removeItemsFromCart(
-        missingEntries.map((entry) => ({
-          productCode: entry.product.code,
-          entryNumber: entry.entryNumber,
-        })),
-      );
-      checkout = await this.getComposedCheckout();
+      checkout = await this.removeOutOfStockCheckoutEntries(missingEntries);
     }
 
     const requiresAgeVerification = await this.apiRequest<boolean>({
@@ -1441,6 +1435,49 @@ export class ShufersalSession {
       console.warn('createOrder: PayMe client hash is empty');
     }
     return encodeURIComponent(hash);
+  }
+
+  private async removeOutOfStockCheckoutEntries(
+    missingEntries: ShufersalCheckoutEntry[],
+  ): Promise<ShufersalComposedCheckout> {
+    const { items } = await this.getCartState();
+    const cartEntryNumbers = new Map(
+      items.map((item) => [item.productCode, item.entryNumber]),
+    );
+
+    const entriesToRemove: CartEntryToRemove[] = [];
+    const notInCart: ShufersalCheckoutEntry[] = [];
+    for (const entry of missingEntries) {
+      const entryNumber = cartEntryNumbers.get(entry.product.code);
+      if (entryNumber === undefined) {
+        notInCart.push(entry);
+      } else {
+        entriesToRemove.push({ productCode: entry.product.code, entryNumber });
+      }
+    }
+    if (notInCart.length > 0) {
+      for (const entry of notInCart) {
+        console.error(
+          `createOrder: Out-of-stock checkout entry ${String(entry.entryNumber)} (${entry.product.code}) is not in the cart: ${JSON.stringify(entry)}`,
+        );
+      }
+      throw new Error(
+        `Out-of-stock checkout items are not in the cart: ${notInCart.map((entry) => entry.product.code).join(', ')}`,
+      );
+    }
+
+    await this.removeItemsFromCart(entriesToRemove);
+
+    const checkout = await this.getComposedCheckout();
+    const stillMissing = checkout.directCart.entries.filter(
+      isCheckoutEntryOutOfStock,
+    );
+    if (stillMissing.length > 0) {
+      throw new Error(
+        `Checkout still has out-of-stock items after removing them: ${stillMissing.map((entry) => entry.product.code).join(', ')}`,
+      );
+    }
+    return checkout;
   }
 
   private async getComposedCheckout(): Promise<ShufersalComposedCheckout> {
