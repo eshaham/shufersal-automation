@@ -47,6 +47,7 @@
   },
   "dependencies": {
     "dayjs": "^1.11.18",
+    "node-html-parser": "^9.0.7",
     "puppeteer-core": "^25.17.0",
     "tslib": "^2.9.1"
   }

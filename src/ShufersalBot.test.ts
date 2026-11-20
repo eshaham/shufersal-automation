@@ -1,5 +1,3 @@
-import type { BrowserContext, Page } from 'puppeteer-core';
-
 import { ShufersalSession } from './ShufersalBot';
 import {
   CartMutationResult,
@@ -35,8 +33,7 @@ function cartResult(items: ExistingCartItem[]): CartMutationResult {
 }
 
 function createSession(responses: CartMutationResult[]) {
-  const page = { on: jest.fn() } as unknown as Page;
-  const session = new ShufersalSession({} as BrowserContext, page, {
+  const session = new ShufersalSession(jest.fn(), {
     username: 'user',
     password: 'password',
   });
