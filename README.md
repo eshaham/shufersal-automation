@@ -191,6 +191,8 @@ Main methods:
 - `getOrders()`: Get active and closed orders
 - `getOrderDetails(orderCode)`: Get detailed order information
 - `addToCart(items)`: Add items to cart
+- `removeItemsFromCart(items)`: Remove items from the cart by product code
+  (`entryNumber` is optional; the session looks it up when it's missing)
 - `removeFromCart(productCode)`: Remove item from cart
 - `clearCart()`: Clear all cart items
 - `getCartItems()`: Get current cart contents
@@ -228,6 +230,8 @@ await session.selectTimeSlot(slots[0]);
 ```
 
 - Search, product lookup, orders, order details, cart and delivery slots work
+- `removeItemsFromCart(items)` takes the same input as on Shufersal, so
+  callers remove items the same way on both chains
 - Rami Levy asks for the card's CVV on every order, so placing one takes a
   payment step:
   1. `checkOrder()` runs Rami Levy's dry run on the cart, slot and address

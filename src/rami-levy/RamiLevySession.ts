@@ -16,6 +16,7 @@ import {
 import {
   AccountOrders,
   CartItemToAdd,
+  CartItemToRemove,
   CartMutationResult,
   CartState,
   DeliveryTimeSlot,
@@ -24,6 +25,7 @@ import {
   OrderInfo,
   Product,
   SearchResults,
+  SellingMethod,
   SerializedSessionData,
 } from '../core/types';
 import {
@@ -360,6 +362,18 @@ export class RamiLevySession
     return this.mutateCart(
       { ...current, ...Object.fromEntries(requested) },
       requested,
+    );
+  }
+
+  async removeItemsFromCart(
+    items: CartItemToRemove[],
+  ): Promise<CartMutationResult> {
+    return this.setCartItemQuantities(
+      items.map(({ productCode }) => ({
+        productCode,
+        quantity: 0,
+        sellingMethod: SellingMethod.Unit,
+      })),
     );
   }
 

@@ -2,6 +2,7 @@ import type { DiagnosableSession } from './SessionProxy';
 import type {
   AccountOrders,
   CartItemToAdd,
+  CartItemToRemove,
   CartMutationResult,
   CartState,
   DeliveryTimeSlot,
@@ -37,6 +38,7 @@ export interface GrocerySession extends DiagnosableSession {
 
   addToCart(items: CartItemToAdd[]): Promise<CartMutationResult>;
   setCartItemQuantities(items: CartItemToAdd[]): Promise<CartMutationResult>;
+  removeItemsFromCart(items: CartItemToRemove[]): Promise<CartMutationResult>;
   clearCart(): Promise<void>;
   getCartState(): Promise<CartState>;
   getCartItems(): Promise<ExistingCartItem[]>;

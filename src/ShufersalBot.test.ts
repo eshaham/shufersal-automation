@@ -88,6 +88,33 @@ describe('removeItemsFromCart', () => {
     expect(result.items).toEqual(remaining);
   });
 
+  it('looks up the entry numbers it is not given', async () => {
+    const remaining = [cartItem('P_3', 0)];
+    const { session, cartRequest } = createSession([
+      cartResult([cartItem('P_3', 0), cartItem('P_1', 4)]),
+      cartResult(remaining),
+    ]);
+
+    const result = await session.removeItemsFromCart([
+      { productCode: 'P_1' },
+      { productCode: 'P_9' },
+    ]);
+
+    expect(cartRequest).toHaveBeenCalledTimes(2);
+    const [config] = cartRequest.mock.calls[1];
+    expect(config.body).toEqual([
+      {
+        productCode: 'P_1',
+        frontQuantity: 0,
+        sellingMethod: ShufersalSellingMethod.Unit,
+        comment: '',
+        entry: 4,
+        affiliateCode: '',
+      },
+    ]);
+    expect(result.items).toEqual(remaining);
+  });
+
   it('throws when Shufersal leaves an entry in the cart', async () => {
     const { session } = createSession([cartResult([cartItem('P_1', 4)])]);
 
