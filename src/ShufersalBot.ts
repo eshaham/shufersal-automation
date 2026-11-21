@@ -58,6 +58,7 @@ import {
 import { CookieJar } from './core/CookieJar';
 import type {
   GrocerySession,
+  OrderCancelSupport,
   OrderUpdateSupport,
   PromotionLookupSupport,
   ReceiptEmailSupport,
@@ -475,7 +476,7 @@ interface CheckoutConfig {
 }
 
 interface ApiRequestConfig {
-  method: 'GET' | 'POST';
+  method: 'GET' | 'POST' | 'DELETE';
   path: string;
   body?: unknown;
   form?: Record<string, string>;
@@ -518,6 +519,7 @@ export interface ShufersalSessionOptions {
 export class ShufersalSession
   implements
     GrocerySession,
+    OrderCancelSupport,
     OrderUpdateSupport,
     ReceiptEmailSupport,
     PromotionLookupSupport
@@ -1207,6 +1209,28 @@ export class ShufersalSession
     return orderInUpdateMode;
   }
 
+  async cancelOrder(code: string): Promise<void> {
+    const { activeOrders } = await this.getOrders();
+    const order = activeOrders.find((o) => o.code === code);
+    if (!order) {
+      throw new Error(`Order ${code} is not an active order`);
+    }
+    if (!order.isCancelable) {
+      throw new Error(`Order ${code} can no longer be cancelled`);
+    }
+
+    await this.sendRequest(
+      { method: 'DELETE', path: `/my-account/orders/${code}` },
+      'text',
+    );
+
+    const after = await this.getOrders();
+    const stillActive = after.activeOrders.find((o) => o.code === code);
+    if (stillActive && stillActive.status !== OrderStatus.Canceled) {
+      throw new Error(`Shufersal did not cancel order ${code}`);
+    }
+  }
+
   async sendReceipt(orderNumber: string, email: string): Promise<void> {
     const orders = await this.getOrders();
     const allOrders = [...orders.activeOrders, ...orders.closedOrders];
@@ -1676,7 +1700,7 @@ export class ShufersalSession
     let status: number | undefined;
     try {
       const csrfToken =
-        method === 'POST' ? await this.httpCsrfToken() : undefined;
+        method === 'GET' ? undefined : await this.httpCsrfToken();
       const result = await this.http.send(
         { method, url: `${WEBAPP_URL}${path}`, body, form, csrfToken },
         responseFormat === 'cart' ? 'html' : responseFormat,
@@ -1699,11 +1723,11 @@ export class ShufersalSession
       if (
         error instanceof HttpStatusError &&
         error.status === 405 &&
-        method === 'POST'
+        method !== 'GET'
       ) {
         if (isRetry) {
           throw new HttpBlockedError(
-            `POST ${path.split('?')[0]} was rejected with 405 after refreshing the CSRF token`,
+            `${method} ${path.split('?')[0]} was rejected with 405 after refreshing the CSRF token`,
           );
         }
         await this.refreshHttpCsrfToken();
@@ -1725,7 +1749,7 @@ export class ShufersalSession
 
     const makeRequest = async (): Promise<unknown> => {
       const csrfToken =
-        method === 'POST' ? await this.getCSRFToken() : undefined;
+        method === 'GET' ? undefined : await this.getCSRFToken();
       const startTime = performance.now();
       let status: number | undefined;
       try {

@@ -4,6 +4,7 @@ export * from './ShufersalSessionError';
 export type {
   GrocerySession,
   InteractivePaymentSupport,
+  OrderCancelSupport,
   OrderUpdateSupport,
   PaymentForm,
   PaymentReference,
