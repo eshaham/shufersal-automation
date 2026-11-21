@@ -53,6 +53,10 @@ export interface OrderUpdateSupport {
   getOrderInUpdateMode(): Promise<string | null>;
 }
 
+export interface OrderCancelSupport {
+  cancelOrder(code: string): Promise<void>;
+}
+
 export interface ReceiptEmailSupport {
   sendReceipt(orderNumber: string, email: string): Promise<void>;
 }

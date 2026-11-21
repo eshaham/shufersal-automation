@@ -6,6 +6,7 @@ import {
   ShufersalSession,
   WEBAPP_URL,
 } from './ShufersalBot';
+import { AccountOrders, OrderInfo, OrderStatus } from './types';
 
 jest.mock('puppeteer-core', () => ({ __esModule: true, default: {} }));
 
@@ -163,6 +164,86 @@ describe('ShufersalSession over HTTP', () => {
     expect(login).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(session.activeTransport).toBe('http');
+  });
+});
+
+function order(code: string, overrides: Partial<OrderInfo> = {}): OrderInfo {
+  return {
+    code,
+    deliveryDateTime: '2026-11-27T13:00:00+02:00',
+    updateableUntilDateTime: null,
+    totalPrice: 500,
+    status: OrderStatus.Active,
+    isUpdatable: true,
+    isActive: true,
+    isCancelable: true,
+    isBeingUpdated: false,
+    rawData: {},
+    ...overrides,
+  };
+}
+
+function ordersOf(...activeOrders: OrderInfo[]): AccountOrders {
+  return { activeOrders, closedOrders: [] };
+}
+
+describe('cancelOrder', () => {
+  it('sends a DELETE for the order with the CSRF token', async () => {
+    const { session, fetchMock } = createSession([
+      json(null, ['XSRF-TOKEN=token; Path=/']),
+      respond(200, ''),
+    ]);
+    jest
+      .spyOn(session, 'getOrders')
+      .mockResolvedValueOnce(ordersOf(order('05700001')))
+      .mockResolvedValueOnce(ordersOf());
+
+    await session.cancelOrder('05700001');
+
+    expect(fetchMock.mock.calls[1][1]?.method).toBe('DELETE');
+    expect(requestPath(fetchMock, 1)).toBe(
+      '/online/he/my-account/orders/05700001',
+    );
+    expect(sentHeader(fetchMock, 1, 'csrftoken')).toBe('token');
+  });
+
+  it('refuses an order that is not active', async () => {
+    const { session, fetchMock } = createSession([]);
+    jest.spyOn(session, 'getOrders').mockResolvedValueOnce(ordersOf());
+
+    await expect(session.cancelOrder('05700001')).rejects.toThrow(
+      'Order 05700001 is not an active order',
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('refuses an order Shufersal no longer lets you cancel', async () => {
+    const { session, fetchMock } = createSession([]);
+    jest
+      .spyOn(session, 'getOrders')
+      .mockResolvedValueOnce(
+        ordersOf(order('05700001', { isCancelable: false })),
+      );
+
+    await expect(session.cancelOrder('05700001')).rejects.toThrow(
+      'Order 05700001 can no longer be cancelled',
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('throws when the order is still active afterwards', async () => {
+    const { session } = createSession([
+      json(null, ['XSRF-TOKEN=token; Path=/']),
+      respond(500, '"Cannot cancel"', { 'content-type': 'application/json' }),
+    ]);
+    jest
+      .spyOn(session, 'getOrders')
+      .mockResolvedValueOnce(ordersOf(order('05700001')))
+      .mockResolvedValueOnce(ordersOf(order('05700001')));
+
+    await expect(session.cancelOrder('05700001')).rejects.toThrow(
+      'Shufersal did not cancel order 05700001',
+    );
   });
 });
 

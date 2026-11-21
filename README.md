@@ -198,6 +198,7 @@ Main methods:
 - `selectTimeSlot(timeSlotCode)`: Select delivery time slot
 - `createOrder(removeMissingItems)`: Place a new order
 - `putOrderInUpdateMode(orderCode)`: Load existing order for modification
+- `cancelOrder(orderCode)`: Cancel an active order Shufersal still lets you cancel
 - `sendReceipt(orderNumber, email)`: Email order receipt
 - `serialize()`: Serialize session data
 - `close()`: Close the session
