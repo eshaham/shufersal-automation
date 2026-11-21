@@ -3,6 +3,7 @@ import customParseFormat from 'dayjs/plugin/customParseFormat';
 import timezone from 'dayjs/plugin/timezone';
 import utc from 'dayjs/plugin/utc';
 
+import { normalizeBarcode } from '../core/barcodes';
 import {
   AccountOrders,
   CartModification,
@@ -74,7 +75,7 @@ export function ramiLevyProductToProduct(
     formattedPrice: formatPrice(product.price.price),
     priceWithoutDiscount: product.price.price,
     promotionCodes: product.sale.map((sale) => String(sale.code)),
-    barcode: String(product.barcode),
+    barcode: normalizeBarcode(String(product.barcode)),
     quantityStep: product.multiplication,
     rawData: product,
   };

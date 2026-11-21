@@ -61,6 +61,10 @@ export interface ReceiptEmailSupport {
   sendReceipt(orderNumber: string, email: string): Promise<void>;
 }
 
+export interface BarcodeLookupSupport {
+  getProductsByBarcodes(barcodes: string[]): Promise<Map<string, Product>>;
+}
+
 export interface PromotionLookupSupport {
   getPromotionDetails(
     promotionCode: string,

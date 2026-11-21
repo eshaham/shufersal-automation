@@ -49,14 +49,17 @@ import puppeteer, {
   Page,
 } from 'puppeteer-core';
 
+import { barcodeFromShufersalCode, shufersalSearchQueries } from './barcode';
 import {
   parseCartHtml,
   parseOrderCodeFromConfirmation,
   RawCartPage,
   rawCartPageToCartMutationResult,
 } from './cartParser';
+import { findProductsByBarcodes } from './core/barcodes';
 import { CookieJar } from './core/CookieJar';
 import type {
+  BarcodeLookupSupport,
   GrocerySession,
   OrderCancelSupport,
   OrderUpdateSupport,
@@ -211,6 +214,7 @@ function shufersalProductSearchResultToProduct(
     priceWithoutDiscount: result.price.value,
     depositPrice: result.depositPrice ?? undefined,
     promotionCodes,
+    barcode: barcodeFromShufersalCode(result.code),
     rawData: result,
   };
 }
@@ -299,6 +303,7 @@ function shufersalProductToProduct(product: ShufersalProduct): Product {
     priceWithoutDiscount: product.price.value,
     depositPrice: product.depositPrice ?? undefined,
     promotionCodes: product.promotionCodes,
+    barcode: barcodeFromShufersalCode(product.code),
     rawData: product,
   };
 }
@@ -522,7 +527,8 @@ export class ShufersalSession
     OrderCancelSupport,
     OrderUpdateSupport,
     ReceiptEmailSupport,
-    PromotionLookupSupport
+    PromotionLookupSupport,
+    BarcodeLookupSupport
 {
   private csrfToken: string | undefined;
   private browser: BrowserPage | undefined;
@@ -740,6 +746,14 @@ export class ShufersalSession
     }
 
     return shufersalProductToProduct(productDetails);
+  }
+
+  getProductsByBarcodes(barcodes: string[]): Promise<Map<string, Product>> {
+    return findProductsByBarcodes(
+      (query, limit) => this.searchProducts(query, limit),
+      barcodes,
+      shufersalSearchQueries,
+    );
   }
 
   async getOrders(options?: OrderLookupOptions): Promise<AccountOrders> {
