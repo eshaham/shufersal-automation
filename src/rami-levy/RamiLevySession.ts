@@ -1,5 +1,7 @@
+import { findProductsByBarcodes } from '../core/barcodes';
 import { CookieJar } from '../core/CookieJar';
 import type {
+  BarcodeLookupSupport,
   GrocerySession,
   InteractivePaymentSupport,
   OrderUpdateSupport,
@@ -158,7 +160,11 @@ function tokenExpiry(token: string): string | undefined {
 }
 
 export class RamiLevySession
-  implements GrocerySession, InteractivePaymentSupport, OrderUpdateSupport
+  implements
+    GrocerySession,
+    InteractivePaymentSupport,
+    OrderUpdateSupport,
+    BarcodeLookupSupport
 {
   private readonly http: HttpTransport;
   private storeId: string | undefined;
@@ -257,6 +263,14 @@ export class RamiLevySession
   async getProductByCode(productCode: string): Promise<Product | null> {
     const products = await this.getProductsByCodes([productCode]);
     return products.get(productCode) ?? null;
+  }
+
+  getProductsByBarcodes(barcodes: string[]): Promise<Map<string, Product>> {
+    return findProductsByBarcodes(
+      (query, limit) => this.searchProducts(query, limit),
+      barcodes,
+      (barcode) => [barcode.replace(/^0+/, '')],
+    );
   }
 
   async getProductsByCodes(

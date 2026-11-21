@@ -286,6 +286,33 @@ const session = RamiLevySession.fromSerialized(result.sessionData);
 - `serialize()` stores the token and its expiry; restore it with
   `RamiLevySession.fromSerialized()`
 
+### Barcodes
+
+Both chains set `product.barcode`. It holds the product's EAN-13 (or
+EAN-8) barcode, so the same item can be matched across chains.
+
+- Shufersal product codes are barcodes: `P_` plus the full barcode, or, for
+  many Israeli products, the barcode without `729` and the zeros after it
+  (`P_66318` is `7290000066318`). `barcodeFromShufersalCode()` rebuilds the
+  full barcode
+- Rami Levy stores barcodes as numbers, so UPC barcodes lose their leading
+  zero. The library pads them back to 13 digits
+- Produce and other items sold by weight use internal codes that are not
+  barcodes, so their `barcode` is undefined
+- `normalizeBarcode(raw)` returns the 13-digit (or 8-digit) form when the
+  check digit is valid, and undefined otherwise
+- `getProductsByBarcodes(barcodes)` on either session returns a map from
+  barcode to the chain's product, leaving out barcodes the chain doesn't
+  sell:
+
+```typescript
+const products = await ramiLevySession.getProductsByBarcodes([
+  '7290000066318',
+  '7290004131074',
+]);
+const bamba = products.get('7290000066318');
+```
+
 ## Development
 
 ### Setup

@@ -1,7 +1,10 @@
 export * from './ShufersalBot';
+export { barcodeFromShufersalCode } from './barcode';
+export { normalizeBarcode } from './core/barcodes';
 export * from './types';
 export * from './ShufersalSessionError';
 export type {
+  BarcodeLookupSupport,
   CodeChannel,
   CodeLogin,
   CodeLoginResult,

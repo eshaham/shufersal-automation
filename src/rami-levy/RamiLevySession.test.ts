@@ -114,6 +114,27 @@ describe('RamiLevySession', () => {
     });
   });
 
+  it('finds products by barcode and skips barcodes Rami Levy does not sell', async () => {
+    const { session, sent } = createSession({
+      'clubs/customer/77577': customerRoute,
+      'POST https://www.rami-levy.co.il/api/catalog': () =>
+        fixture('catalog-search'),
+    });
+
+    const products = await session.getProductsByBarcodes([
+      '7290004131074',
+      '7290000000000',
+      '7290004131074',
+    ]);
+
+    const queries = sent
+      .filter((request) => request.url.endsWith('/catalog'))
+      .map((request) => (request.body as { q: string }).q);
+    expect(queries).toEqual(['7290004131074', '7290000000000']);
+    expect(Array.from(products.keys())).toEqual(['7290004131074']);
+    expect(products.get('7290004131074')).toMatchObject({ code: '3025' });
+  });
+
   it('looks up products by code and marks weighed produce', async () => {
     const { session, sent } = createSession({
       'clubs/customer/77577': customerRoute,
@@ -127,7 +148,7 @@ describe('RamiLevySession', () => {
       code: '3',
       sellingMethod: SellingMethod.Weight,
       quantityStep: 0.5,
-      barcode: '101',
+      barcode: undefined,
     });
   });
 
@@ -183,7 +204,7 @@ describe('RamiLevySession', () => {
     });
     expect(details?.items[0].product).toMatchObject({
       code: '3',
-      barcode: '101',
+      barcode: undefined,
     });
   });
 
