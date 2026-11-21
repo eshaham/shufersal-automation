@@ -205,9 +205,9 @@ Main methods:
 ### RamiLevySession (experimental)
 
 `RamiLevySession` implements the same `GrocerySession` interface for Rami
-Levy over plain HTTP, with no browser. It needs a login token from Rami
-Levy's site, which logs in with an SMS code and a reCAPTCHA, so the library
-can't log in by itself. The token lasts 60 days.
+Levy over plain HTTP, with no browser. It needs a login token, which
+`RamiLevyLogin` gets with the customer's email and the code Rami Levy texts
+them. The token lasts 60 days.
 
 ```typescript
 import { RamiLevySession, SellingMethod } from 'shufersal-automation';
@@ -243,7 +243,45 @@ await session.selectTimeSlot(slots[0]);
   registration" code. It also happens on Rami Levy's own site, and the code
   isn't needed
 - `performLogin()` throws `RamiLevyLoginRequiredError`, and so does any call
-  made with an expired token
+  made with an expired token. Log in with `RamiLevyLogin` instead:
+
+```typescript
+import puppeteer from 'puppeteer-core';
+import { RamiLevyLogin, RamiLevySession } from 'shufersal-automation';
+
+const browser = await puppeteer.launch({ executablePath: CHROME_PATH });
+const pending = await new RamiLevyLogin({ browser }).start(
+  'customer@example.com',
+);
+// pending.codeRequest says where the code went, e.g.
+// { channel: 'sms', destination: '1234' }
+let result = await pending.submitCode(
+  await askCustomerForCode(pending.codeRequest),
+);
+while (result.status === 'code-sent') {
+  // Rami Levy asked for another code, e.g. an email code and then an SMS code
+  result = await pending.submitCode(await askCustomerForCode(result));
+}
+const session = RamiLevySession.fromSerialized(result.sessionData);
+```
+
+- Login is the customer's email plus a code Rami Levy texts them. For an email
+  it doesn't know, Rami Levy emails a code first to check the address. The
+  site's login form runs an invisible reCAPTCHA on every step, so
+  `RamiLevyLogin` fills that form in a real browser and keeps it open until
+  the login succeeds or `cancel()` is called. Keep the pending login in the
+  same process until the customer sends the code
+- The form drops keystrokes while it settles, so `RamiLevyLogin` types one
+  character at a time, refocuses the field when it loses focus, and submits
+  only once the field holds exactly what it meant to type
+- `keepBrowserData: true` logs in through the browser's default profile
+  instead of a fresh one, so its cookies stay for the next login
+- If Rami Levy shows a reCAPTCHA challenge instead, the login fails with
+  `RamiLevyLoginError` (reason `challenge`); the library doesn't solve
+  challenges. A wrong code fails with reason `invalid-code` and leaves the
+  pending login open for another try
+- The token lasts 60 days. Logging in again before then returns the same
+  token, so a new login can't extend it
 - `serialize()` stores the token and its expiry; restore it with
   `RamiLevySession.fromSerialized()`
 

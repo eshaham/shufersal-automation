@@ -78,6 +78,27 @@ export interface PaymentReference {
   amount: number;
 }
 
+export type CodeChannel = 'sms' | 'email';
+
+export interface CodeRequest {
+  channel: CodeChannel;
+  destination: string | null;
+}
+
+export type CodeLoginResult =
+  | { status: 'logged-in'; sessionData: SerializedSessionData }
+  | ({ status: 'code-sent' } & CodeRequest);
+
+export interface PendingCodeLogin {
+  readonly codeRequest: CodeRequest;
+  submitCode(code: string): Promise<CodeLoginResult>;
+  cancel(): Promise<void>;
+}
+
+export interface CodeLogin {
+  start(username: string): Promise<PendingCodeLogin>;
+}
+
 export interface InteractivePaymentSupport {
   preparePayment(): Promise<PaymentForm>;
   registerPayment(message: unknown): Promise<PaymentReference>;
