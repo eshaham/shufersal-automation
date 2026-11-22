@@ -357,9 +357,9 @@ describe('RamiLevySession', () => {
       'clubs/customer/77577': customerRoute,
     });
 
-    await expect(session.createOrder(false)).rejects.toBeInstanceOf(
-      RamiLevyPaymentRequiredError,
-    );
+    await expect(
+      session.createOrder({ removeMissingItems: false }),
+    ).rejects.toBeInstanceOf(RamiLevyPaymentRequiredError);
   });
 
   it('opens a CVV form for the newest valid card and the cart total', async () => {
@@ -470,10 +470,13 @@ describe('RamiLevySession', () => {
         fixture('order-details'),
     });
 
-    const order = await session.createOrder(false, {
-      id: '10534188',
-      amount: 0.1,
-    });
+    const order = await session.createOrder(
+      { removeMissingItems: false },
+      {
+        id: '10534188',
+        amount: 0.1,
+      },
+    );
 
     const orderCalls = sent.filter((request) =>
       request.url.endsWith('/v3/site/orders'),
@@ -529,7 +532,7 @@ describe('RamiLevySession', () => {
         fixture('order-details'),
     });
 
-    const order = await session.createOrder(false);
+    const order = await session.createOrder({ removeMissingItems: false });
 
     const updates = sent.filter((request) => request.method === 'PUT');
     expect(updates).toHaveLength(2);
@@ -569,7 +572,10 @@ describe('RamiLevySession', () => {
     });
 
     await expect(
-      session.createOrder(false, { id: '1', amount: 0.1 }),
+      session.createOrder(
+        { removeMissingItems: false },
+        { id: '1', amount: 0.1 },
+      ),
     ).rejects.toBeInstanceOf(RamiLevyOrderError);
   });
 

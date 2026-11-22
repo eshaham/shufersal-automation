@@ -448,10 +448,12 @@ describe('resolvePendingCartMerge', () => {
       .spyOn(session, 'getCartState')
       .mockResolvedValueOnce({ items: before, orderInUpdateMode: null })
       .mockResolvedValueOnce({ items: after, orderInUpdateMode: null });
-    const resolve = () =>
+    const resolve = (mergePendingCart = true) =>
       (
-        session as unknown as { resolvePendingCartMerge: () => Promise<void> }
-      ).resolvePendingCartMerge();
+        session as unknown as {
+          resolvePendingCartMerge: (mergePendingCart: boolean) => Promise<void>;
+        }
+      ).resolvePendingCartMerge(mergePendingCart);
     return { evaluate, getCartState, resolve };
   }
 
@@ -460,6 +462,16 @@ describe('resolvePendingCartMerge', () => {
 
     await resolve();
 
+    expect(evaluate).toHaveBeenCalledTimes(1);
+    expect(getCartState).not.toHaveBeenCalled();
+  });
+
+  it('throws without merging when the caller did not opt in', async () => {
+    const { evaluate, getCartState, resolve } = setup(true, [], []);
+
+    await expect(resolve(false)).rejects.toMatchObject({
+      name: 'PendingCartMergeError',
+    });
     expect(evaluate).toHaveBeenCalledTimes(1);
     expect(getCartState).not.toHaveBeenCalled();
   });

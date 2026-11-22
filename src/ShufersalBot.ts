@@ -5,6 +5,7 @@ import {
   CartModification,
   CartMutationResult,
   CartState,
+  CreateOrderOptions,
   DeliveryTimeSlot,
   ExistingCartItem,
   ItemDetails,
@@ -88,6 +89,13 @@ export class InvalidCredentialsError extends Error {
   constructor(message = 'Invalid credentials') {
     super(message);
     this.name = 'InvalidCredentialsError';
+  }
+}
+
+export class PendingCartMergeError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'PendingCartMergeError';
   }
 }
 
@@ -1120,12 +1128,20 @@ export class ShufersalSession
     });
   }
 
-  async createOrder(removeMissingItems: boolean): Promise<OrderInfo> {
-    return this.withBrowserTransport(() => this.placeOrder(removeMissingItems));
+  async createOrder({
+    removeMissingItems,
+    mergePendingCart = false,
+  }: CreateOrderOptions): Promise<OrderInfo> {
+    return this.withBrowserTransport(() =>
+      this.placeOrder(removeMissingItems, mergePendingCart),
+    );
   }
 
-  private async placeOrder(removeMissingItems: boolean): Promise<OrderInfo> {
-    await this.resolvePendingCartMerge();
+  private async placeOrder(
+    removeMissingItems: boolean,
+    mergePendingCart: boolean,
+  ): Promise<OrderInfo> {
+    await this.resolvePendingCartMerge(mergePendingCart);
 
     console.info('createOrder: Authenticating checkout');
     const checkoutConfig = await this.authenticateCheckout();
@@ -1445,12 +1461,19 @@ export class ShufersalSession
     }
   }
 
-  private async resolvePendingCartMerge(): Promise<void> {
+  private async resolvePendingCartMerge(
+    mergePendingCart: boolean,
+  ): Promise<void> {
     const mergePending = await this.page.evaluate(
       () => window.miglog?.showMergeCarts === true,
     );
     if (!mergePending) {
       return;
+    }
+    if (!mergePendingCart) {
+      throw new PendingCartMergeError(
+        'Shufersal is asking whether to merge the cart from before sign-in',
+      );
     }
 
     console.info(
@@ -1475,7 +1498,7 @@ export class ShufersalSession
 
     const changed = changedCartQuantities(before.items, after.items);
     if (changed.length > 0) {
-      throw new Error(
+      throw new PendingCartMergeError(
         `Merging carts changed the cart, not placing the order: ${changed.join(', ')}`,
       );
     }
