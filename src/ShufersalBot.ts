@@ -1,6 +1,7 @@
 import {
   AccountOrders,
   CartItemToAdd,
+  CartItemToRemove,
   CartModification,
   CartMutationResult,
   CartState,
@@ -496,10 +497,7 @@ export interface CartEntryOptions {
   entryNumber?: number;
 }
 
-export interface CartEntryToRemove {
-  productCode: string;
-  entryNumber: number;
-}
+export type CartEntryToRemove = Required<CartItemToRemove>;
 
 function isCheckoutEntryOutOfStock(entry: ShufersalCheckoutEntry): boolean {
   return (
@@ -940,8 +938,9 @@ export class ShufersalSession
   }
 
   async removeItemsFromCart(
-    entries: CartEntryToRemove[],
+    items: CartItemToRemove[],
   ): Promise<CartMutationResult> {
+    const entries = await this.cartEntriesToRemove(items);
     if (entries.length === 0) {
       const state = await this.getCartState();
       return { ...state, modifications: [] };
@@ -968,6 +967,22 @@ export class ShufersalSession
     }
 
     return result;
+  }
+
+  private async cartEntriesToRemove(
+    items: CartItemToRemove[],
+  ): Promise<CartEntryToRemove[]> {
+    const withEntryNumbers = items.filter(
+      (item): item is CartEntryToRemove => item.entryNumber !== undefined,
+    );
+    if (withEntryNumbers.length === items.length) {
+      return withEntryNumbers;
+    }
+    const productCodes = new Set(items.map((item) => item.productCode));
+    const cartItems = await this.getCartItems();
+    return cartItems
+      .filter((item) => productCodes.has(item.productCode))
+      .map(({ productCode, entryNumber }) => ({ productCode, entryNumber }));
   }
 
   async updateCartItemQuantity(

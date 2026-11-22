@@ -259,6 +259,25 @@ describe('RamiLevySession', () => {
     ]);
   });
 
+  it('removes items by writing the cart without them', async () => {
+    const { session, sent } = createSession({
+      'clubs/customer/77577': customerRoute,
+      'POST https://www.rami-levy.co.il/api/v2/cart': () =>
+        fixture('cart-write'),
+    });
+
+    await session.removeItemsFromCart([{ productCode: '3' }]);
+
+    const write = sent.find((request) => request.url.endsWith('/v2/cart'));
+    expect(write?.body).toMatchObject({
+      store: '412',
+      items: { '3025': '2.00' },
+    });
+    expect(
+      (write?.body as { items: Record<string, string> }).items,
+    ).not.toHaveProperty('3');
+  });
+
   it('adds to the quantities already in the cart', async () => {
     const { session, sent } = createSession({
       'clubs/customer/77577': customerRoute,

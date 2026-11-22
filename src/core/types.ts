@@ -70,6 +70,11 @@ export interface CartItemToAdd extends Omit<Item, 'rawData'> {
   sellingMethod: SellingMethod;
 }
 
+export interface CartItemToRemove {
+  productCode: string;
+  entryNumber?: number;
+}
+
 export enum PromotionType {
   SIMPLE_DISCOUNT = 'SIMPLE_DISCOUNT',
   X_FOR_Y = 'X_FOR_Y',
