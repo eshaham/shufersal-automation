@@ -29,6 +29,7 @@ const TYPING_ATTEMPTS = 3;
 const RATE_LIMITED_STATUS = 3;
 const USER_NOT_FOUND_STATUS = -3;
 const DEFAULT_TIMEOUT_MS = 30_000;
+const DESKTOP_VIEWPORT = { width: 1366, height: 900 };
 const JWT_PATTERN = /^eyJ[\w-]+\.eyJ[\w-]+\.[\w-]+$/;
 
 export type RamiLevyLoginFailure =
@@ -352,6 +353,7 @@ export class RamiLevyLogin implements CodeLogin {
       ? () => page.close()
       : () => context.close();
     try {
+      await page.setViewport(DESKTOP_VIEWPORT);
       await page.goto(`${RAMI_LEVY_SITE_URL}/he`, {
         waitUntil: 'networkidle2',
         timeout: this.timeoutMs,
