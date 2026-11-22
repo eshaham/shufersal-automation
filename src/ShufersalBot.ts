@@ -133,10 +133,33 @@ declare global {
     PayMe?: {
       clientData: (isTestMode: boolean) => Promise<{ hash?: string }>;
     };
+    miglog?: {
+      showMergeCarts?: boolean;
+    };
   }
 }
 
 type ResponseFormat = Exclude<HttpResponseFormat, 'html'> | 'cart';
+
+function changedCartQuantities(
+  before: ExistingCartItem[],
+  after: ExistingCartItem[],
+): string[] {
+  const quantityIn = (items: ExistingCartItem[], productCode: string): number =>
+    items.find((item) => item.productCode === productCode)?.quantity ?? 0;
+  const productCodes = Array.from(
+    new Set<string>([...before, ...after].map((item) => item.productCode)),
+  );
+  return productCodes
+    .filter(
+      (productCode) =>
+        quantityIn(before, productCode) !== quantityIn(after, productCode),
+    )
+    .map(
+      (productCode) =>
+        `${productCode} ${String(quantityIn(before, productCode))}→${String(quantityIn(after, productCode))}`,
+    );
+}
 
 const SHUFERSAL_HTTP_OPTIONS: HttpTransportOptions = {
   csrfHeaderName: 'csrftoken',
@@ -1102,6 +1125,8 @@ export class ShufersalSession
   }
 
   private async placeOrder(removeMissingItems: boolean): Promise<OrderInfo> {
+    await this.resolvePendingCartMerge();
+
     console.info('createOrder: Authenticating checkout');
     const checkoutConfig = await this.authenticateCheckout();
 
@@ -1417,6 +1442,42 @@ export class ShufersalSession
       ) {
         throw error;
       }
+    }
+  }
+
+  private async resolvePendingCartMerge(): Promise<void> {
+    const mergePending = await this.page.evaluate(
+      () => window.miglog?.showMergeCarts === true,
+    );
+    if (!mergePending) {
+      return;
+    }
+
+    console.info(
+      'createOrder: Keeping the cart built before Shufersal asked to merge carts',
+    );
+    const before = await this.getCartState();
+    await this.page.evaluate(async (url) => {
+      const response = await fetch(url, {
+        credentials: 'include',
+        headers: { 'x-requested-with': 'XMLHttpRequest' },
+      });
+      if (!response.ok) {
+        throw new Error(
+          `Cart merge failed with status ${String(response.status)}`,
+        );
+      }
+      if (window.miglog) {
+        window.miglog.showMergeCarts = false;
+      }
+    }, `${WEBAPP_URL}/cart/merge?toMerge=true`);
+    const after = await this.getCartState();
+
+    const changed = changedCartQuantities(before.items, after.items);
+    if (changed.length > 0) {
+      throw new Error(
+        `Merging carts changed the cart, not placing the order: ${changed.join(', ')}`,
+      );
     }
   }
 
