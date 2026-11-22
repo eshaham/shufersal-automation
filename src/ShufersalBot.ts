@@ -99,6 +99,13 @@ export class PendingCartMergeError extends Error {
   }
 }
 
+export class CartChangedByMergeError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'CartChangedByMergeError';
+  }
+}
+
 export class SessionExpiredError extends Error {
   constructor(message = 'Persisted session has expired') {
     super(message);
@@ -1498,7 +1505,7 @@ export class ShufersalSession
 
     const changed = changedCartQuantities(before.items, after.items);
     if (changed.length > 0) {
-      throw new PendingCartMergeError(
+      throw new CartChangedByMergeError(
         `Merging carts changed the cart, not placing the order: ${changed.join(', ')}`,
       );
     }

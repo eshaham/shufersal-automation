@@ -497,8 +497,10 @@ describe('resolvePendingCartMerge', () => {
       [extra, cartItem('P_9', 1)],
     );
 
-    await expect(resolve()).rejects.toThrow(
-      'Merging carts changed the cart, not placing the order: P_1 1→3, P_9 0→1',
-    );
+    await expect(resolve()).rejects.toMatchObject({
+      name: 'CartChangedByMergeError',
+      message:
+        'Merging carts changed the cart, not placing the order: P_1 1→3, P_9 0→1',
+    });
   });
 });
