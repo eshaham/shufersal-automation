@@ -1,10 +1,10 @@
 import type { PackSize, PackUnit } from './types';
 
 const UNITS: Array<{ pattern: string; unit: PackUnit; multiplier: number }> = [
-  { pattern: 'ק["״]ג', unit: 'g', multiplier: 1000 },
+  { pattern: 'ק["״]?ג', unit: 'g', multiplier: 1000 },
   { pattern: 'גרם', unit: 'g', multiplier: 1 },
   { pattern: 'ליטר', unit: 'ml', multiplier: 1000 },
-  { pattern: 'מ["״]ל', unit: 'ml', multiplier: 1 },
+  { pattern: 'מ["״]?ל', unit: 'ml', multiplier: 1 },
   {
     pattern: "יחידות|יח['׳]?|טבליות|כמוסות|גלילים",
     unit: 'unit',
@@ -13,6 +13,7 @@ const UNITS: Array<{ pattern: string; unit: PackUnit; multiplier: number }> = [
 ];
 
 const NUMBER = '(\\d+(?:\\.\\d+)?)';
+const WORD_END = '(?![א-ת])';
 
 export function parsePackSize(
   description: string | null | undefined,
@@ -22,7 +23,7 @@ export function parsePackSize(
   }
   for (const { pattern, unit, multiplier } of UNITS) {
     const multipack = new RegExp(
-      `${NUMBER}\\s*[*×x]\\s*${NUMBER}\\s*(?:${pattern})`,
+      `${NUMBER}\\s*[*×x]\\s*${NUMBER}\\s*(?:${pattern})${WORD_END}`,
     ).exec(description);
     if (multipack) {
       return {
@@ -30,7 +31,9 @@ export function parsePackSize(
         unit,
       };
     }
-    const single = new RegExp(`${NUMBER}\\s*(?:${pattern})`).exec(description);
+    const single = new RegExp(`${NUMBER}\\s*(?:${pattern})${WORD_END}`).exec(
+      description,
+    );
     if (single) {
       return { amount: Number(single[1]) * multiplier, unit };
     }
