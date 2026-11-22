@@ -1,6 +1,7 @@
 export * from './ShufersalBot';
 export { barcodeFromShufersalCode } from './barcode';
 export { normalizeBarcode } from './core/barcodes';
+export { parsePackSize } from './core/packSize';
 export * from './types';
 export * from './ShufersalSessionError';
 export type {

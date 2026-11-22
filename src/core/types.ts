@@ -15,6 +15,13 @@ export enum OrderStatus {
   Canceled = 'CANCELED',
 }
 
+export type PackUnit = 'g' | 'ml' | 'unit';
+
+export interface PackSize {
+  amount: number;
+  unit: PackUnit;
+}
+
 export interface Product {
   code: string;
   name: string;
@@ -33,6 +40,7 @@ export interface Product {
   promotionCodes: string[];
   barcode?: string;
   quantityStep?: number;
+  packSize?: PackSize;
   rawData: unknown;
 }
 

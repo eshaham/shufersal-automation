@@ -76,6 +76,7 @@ import {
   HttpTransportOptions,
   LoginRedirectError,
 } from './core/HttpTransport';
+import { parsePackSize } from './core/packSize';
 import { createSessionProxy } from './core/SessionProxy';
 import { extractPromotionInfo } from './promotions';
 import { parseReceipt } from './receiptParser';
@@ -343,6 +344,7 @@ function shufersalProductToProduct(product: ShufersalProduct): Product {
     depositPrice: product.depositPrice ?? undefined,
     promotionCodes: product.promotionCodes,
     barcode: barcodeFromShufersalCode(product.code),
+    packSize: parsePackSize(product.unitDescription),
     rawData: product,
   };
 }
