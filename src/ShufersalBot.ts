@@ -5,6 +5,7 @@ import {
   CartModification,
   CartMutationResult,
   CartState,
+  CreateOrderOptions,
   DeliveryTimeSlot,
   ExistingCartItem,
   ItemDetails,
@@ -91,6 +92,20 @@ export class InvalidCredentialsError extends Error {
   }
 }
 
+export class PendingCartMergeError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'PendingCartMergeError';
+  }
+}
+
+export class CartChangedByMergeError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'CartChangedByMergeError';
+  }
+}
+
 export class SessionExpiredError extends Error {
   constructor(message = 'Persisted session has expired') {
     super(message);
@@ -133,10 +148,33 @@ declare global {
     PayMe?: {
       clientData: (isTestMode: boolean) => Promise<{ hash?: string }>;
     };
+    miglog?: {
+      showMergeCarts?: boolean;
+    };
   }
 }
 
 type ResponseFormat = Exclude<HttpResponseFormat, 'html'> | 'cart';
+
+function changedCartQuantities(
+  before: ExistingCartItem[],
+  after: ExistingCartItem[],
+): string[] {
+  const quantityIn = (items: ExistingCartItem[], productCode: string): number =>
+    items.find((item) => item.productCode === productCode)?.quantity ?? 0;
+  const productCodes = Array.from(
+    new Set<string>([...before, ...after].map((item) => item.productCode)),
+  );
+  return productCodes
+    .filter(
+      (productCode) =>
+        quantityIn(before, productCode) !== quantityIn(after, productCode),
+    )
+    .map(
+      (productCode) =>
+        `${productCode} ${String(quantityIn(before, productCode))}→${String(quantityIn(after, productCode))}`,
+    );
+}
 
 const SHUFERSAL_HTTP_OPTIONS: HttpTransportOptions = {
   csrfHeaderName: 'csrftoken',
@@ -1097,11 +1135,21 @@ export class ShufersalSession
     });
   }
 
-  async createOrder(removeMissingItems: boolean): Promise<OrderInfo> {
-    return this.withBrowserTransport(() => this.placeOrder(removeMissingItems));
+  async createOrder({
+    removeMissingItems,
+    mergePendingCart = false,
+  }: CreateOrderOptions): Promise<OrderInfo> {
+    return this.withBrowserTransport(() =>
+      this.placeOrder(removeMissingItems, mergePendingCart),
+    );
   }
 
-  private async placeOrder(removeMissingItems: boolean): Promise<OrderInfo> {
+  private async placeOrder(
+    removeMissingItems: boolean,
+    mergePendingCart: boolean,
+  ): Promise<OrderInfo> {
+    await this.resolvePendingCartMerge(mergePendingCart);
+
     console.info('createOrder: Authenticating checkout');
     const checkoutConfig = await this.authenticateCheckout();
 
@@ -1417,6 +1465,49 @@ export class ShufersalSession
       ) {
         throw error;
       }
+    }
+  }
+
+  private async resolvePendingCartMerge(
+    mergePendingCart: boolean,
+  ): Promise<void> {
+    const mergePending = await this.page.evaluate(
+      () => window.miglog?.showMergeCarts === true,
+    );
+    if (!mergePending) {
+      return;
+    }
+    if (!mergePendingCart) {
+      throw new PendingCartMergeError(
+        'Shufersal is asking whether to merge the cart from before sign-in',
+      );
+    }
+
+    console.info(
+      'createOrder: Keeping the cart built before Shufersal asked to merge carts',
+    );
+    const before = await this.getCartState();
+    await this.page.evaluate(async (url) => {
+      const response = await fetch(url, {
+        credentials: 'include',
+        headers: { 'x-requested-with': 'XMLHttpRequest' },
+      });
+      if (!response.ok) {
+        throw new Error(
+          `Cart merge failed with status ${String(response.status)}`,
+        );
+      }
+      if (window.miglog) {
+        window.miglog.showMergeCarts = false;
+      }
+    }, `${WEBAPP_URL}/cart/merge?toMerge=true`);
+    const after = await this.getCartState();
+
+    const changed = changedCartQuantities(before.items, after.items);
+    if (changed.length > 0) {
+      throw new CartChangedByMergeError(
+        `Merging carts changed the cart, not placing the order: ${changed.join(', ')}`,
+      );
     }
   }
 

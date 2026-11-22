@@ -429,3 +429,78 @@ describe('shufersalOrderEntryToItem', () => {
     expect(item.discountAmount).toBe(8.3);
   });
 });
+
+describe('resolvePendingCartMerge', () => {
+  function setup(
+    mergePending: boolean,
+    before: ExistingCartItem[],
+    after: ExistingCartItem[],
+  ) {
+    const { session } = createSession([]);
+    const evaluate = jest
+      .fn()
+      .mockResolvedValueOnce(mergePending)
+      .mockResolvedValueOnce(undefined);
+    (
+      session as unknown as { browser: { page: { evaluate: jest.Mock } } }
+    ).browser = { page: { evaluate } };
+    const getCartState = jest
+      .spyOn(session, 'getCartState')
+      .mockResolvedValueOnce({ items: before, orderInUpdateMode: null })
+      .mockResolvedValueOnce({ items: after, orderInUpdateMode: null });
+    const resolve = (mergePendingCart = true) =>
+      (
+        session as unknown as {
+          resolvePendingCartMerge: (mergePendingCart: boolean) => Promise<void>;
+        }
+      ).resolvePendingCartMerge(mergePendingCart);
+    return { evaluate, getCartState, resolve };
+  }
+
+  it('does nothing when no merge is pending', async () => {
+    const { evaluate, getCartState, resolve } = setup(false, [], []);
+
+    await resolve();
+
+    expect(evaluate).toHaveBeenCalledTimes(1);
+    expect(getCartState).not.toHaveBeenCalled();
+  });
+
+  it('throws without merging when the caller did not opt in', async () => {
+    const { evaluate, getCartState, resolve } = setup(true, [], []);
+
+    await expect(resolve(false)).rejects.toMatchObject({
+      name: 'PendingCartMergeError',
+    });
+    expect(evaluate).toHaveBeenCalledTimes(1);
+    expect(getCartState).not.toHaveBeenCalled();
+  });
+
+  it('merges and keeps going when the cart is unchanged', async () => {
+    const items = [cartItem('P_1', 0), cartItem('P_2', 1)];
+    const { evaluate, resolve } = setup(true, items, [...items].reverse());
+
+    await resolve();
+
+    expect(evaluate).toHaveBeenCalledTimes(2);
+    expect(evaluate).toHaveBeenLastCalledWith(
+      expect.any(Function),
+      expect.stringContaining('/cart/merge?toMerge=true'),
+    );
+  });
+
+  it('throws when the merge changed the cart', async () => {
+    const extra = { ...cartItem('P_1', 0), quantity: 3 };
+    const { resolve } = setup(
+      true,
+      [cartItem('P_1', 0)],
+      [extra, cartItem('P_9', 1)],
+    );
+
+    await expect(resolve()).rejects.toMatchObject({
+      name: 'CartChangedByMergeError',
+      message:
+        'Merging carts changed the cart, not placing the order: P_1 1→3, P_9 0→1',
+    });
+  });
+});

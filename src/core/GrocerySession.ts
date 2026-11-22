@@ -5,6 +5,7 @@ import type {
   CartItemToRemove,
   CartMutationResult,
   CartState,
+  CreateOrderOptions,
   DeliveryTimeSlot,
   ExistingCartItem,
   OrderDetails,
@@ -47,7 +48,7 @@ export interface GrocerySession extends DiagnosableSession {
   getSelectedTimeSlot(): Promise<DeliveryTimeSlot | null>;
   selectTimeSlot(timeSlotOrCode: string | DeliveryTimeSlot): Promise<void>;
 
-  createOrder(removeMissingItems: boolean): Promise<OrderInfo>;
+  createOrder(options: CreateOrderOptions): Promise<OrderInfo>;
 }
 
 export interface OrderUpdateSupport {

@@ -211,3 +211,8 @@ export interface ReceiptDetails {
 export interface OrderLookupOptions {
   detectUpdateMode?: boolean;
 }
+
+export interface CreateOrderOptions {
+  removeMissingItems: boolean;
+  mergePendingCart?: boolean;
+}

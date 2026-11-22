@@ -19,6 +19,7 @@ import {
   CartItemToRemove,
   CartMutationResult,
   CartState,
+  CreateOrderOptions,
   DeliveryTimeSlot,
   ExistingCartItem,
   OrderDetails,
@@ -566,7 +567,7 @@ export class RamiLevySession
   }
 
   async createOrder(
-    _removeMissingItems: boolean,
+    _options: CreateOrderOptions,
     payment?: PaymentReference,
   ): Promise<OrderInfo> {
     const customer = await this.loadCustomer();

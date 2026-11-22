@@ -75,7 +75,7 @@ async function automate(bot: ShufersalBot, username: string, password: string) {
     }
 
     // Uncomment to create order
-    // await session.createOrder(true);
+    // await session.createOrder({ removeMissingItems: true });
   } else {
     console.log('No closed orders found');
   }
