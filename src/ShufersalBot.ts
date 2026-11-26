@@ -93,6 +93,8 @@ export class InvalidCredentialsError extends Error {
   }
 }
 
+type PendingCartChoice = 'fail' | 'merge' | 'discard';
+
 export class PendingCartMergeError extends Error {
   constructor(message: string) {
     super(message);
@@ -1140,17 +1142,23 @@ export class ShufersalSession
   async createOrder({
     removeMissingItems,
     mergePendingCart = false,
+    discardPendingCart = false,
   }: CreateOrderOptions): Promise<OrderInfo> {
+    const pendingCart: PendingCartChoice = mergePendingCart
+      ? 'merge'
+      : discardPendingCart
+        ? 'discard'
+        : 'fail';
     return this.withBrowserTransport(() =>
-      this.placeOrder(removeMissingItems, mergePendingCart),
+      this.placeOrder(removeMissingItems, pendingCart),
     );
   }
 
   private async placeOrder(
     removeMissingItems: boolean,
-    mergePendingCart: boolean,
+    pendingCart: PendingCartChoice,
   ): Promise<OrderInfo> {
-    await this.resolvePendingCartMerge(mergePendingCart);
+    await this.resolvePendingCartMerge(pendingCart);
 
     console.info('createOrder: Authenticating checkout');
     const checkoutConfig = await this.authenticateCheckout();
@@ -1471,7 +1479,7 @@ export class ShufersalSession
   }
 
   private async resolvePendingCartMerge(
-    mergePendingCart: boolean,
+    pendingCart: PendingCartChoice,
   ): Promise<void> {
     const mergePending = await this.page.evaluate(
       () => window.miglog?.showMergeCarts === true,
@@ -1479,36 +1487,42 @@ export class ShufersalSession
     if (!mergePending) {
       return;
     }
-    if (!mergePendingCart) {
+    if (pendingCart === 'fail') {
       throw new PendingCartMergeError(
         'Shufersal is asking whether to merge the cart from before sign-in',
       );
     }
 
+    const toMerge = pendingCart === 'merge';
     console.info(
-      'createOrder: Keeping the cart built before Shufersal asked to merge carts',
+      toMerge
+        ? 'createOrder: Keeping the cart built before Shufersal asked to merge carts'
+        : 'createOrder: Discarding the cart from before sign-in that Shufersal asked to merge',
     );
     const before = await this.getCartState();
-    await this.page.evaluate(async (url) => {
-      const response = await fetch(url, {
-        credentials: 'include',
-        headers: { 'x-requested-with': 'XMLHttpRequest' },
-      });
-      if (!response.ok) {
-        throw new Error(
-          `Cart merge failed with status ${String(response.status)}`,
-        );
-      }
-      if (window.miglog) {
-        window.miglog.showMergeCarts = false;
-      }
-    }, `${WEBAPP_URL}/cart/merge?toMerge=true`);
+    await this.page.evaluate(
+      async (url) => {
+        const response = await fetch(url, {
+          credentials: 'include',
+          headers: { 'x-requested-with': 'XMLHttpRequest' },
+        });
+        if (!response.ok) {
+          throw new Error(
+            `Cart merge failed with status ${String(response.status)}`,
+          );
+        }
+        if (window.miglog) {
+          window.miglog.showMergeCarts = false;
+        }
+      },
+      `${WEBAPP_URL}/cart/merge?toMerge=${String(toMerge)}`,
+    );
     const after = await this.getCartState();
 
     const changed = changedCartQuantities(before.items, after.items);
     if (changed.length > 0) {
       throw new CartChangedByMergeError(
-        `Merging carts changed the cart, not placing the order: ${changed.join(', ')}`,
+        `${toMerge ? 'Merging carts' : 'Discarding the pending cart'} changed the cart, not placing the order: ${changed.join(', ')}`,
       );
     }
   }
