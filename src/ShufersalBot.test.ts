@@ -448,12 +448,14 @@ describe('resolvePendingCartMerge', () => {
       .spyOn(session, 'getCartState')
       .mockResolvedValueOnce({ items: before, orderInUpdateMode: null })
       .mockResolvedValueOnce({ items: after, orderInUpdateMode: null });
-    const resolve = (mergePendingCart = true) =>
+    const resolve = (pendingCart: 'fail' | 'merge' | 'discard' = 'merge') =>
       (
         session as unknown as {
-          resolvePendingCartMerge: (mergePendingCart: boolean) => Promise<void>;
+          resolvePendingCartMerge: (
+            pendingCart: 'fail' | 'merge' | 'discard',
+          ) => Promise<void>;
         }
-      ).resolvePendingCartMerge(mergePendingCart);
+      ).resolvePendingCartMerge(pendingCart);
     return { evaluate, getCartState, resolve };
   }
 
@@ -469,7 +471,7 @@ describe('resolvePendingCartMerge', () => {
   it('throws without merging when the caller did not opt in', async () => {
     const { evaluate, getCartState, resolve } = setup(true, [], []);
 
-    await expect(resolve(false)).rejects.toMatchObject({
+    await expect(resolve('fail')).rejects.toMatchObject({
       name: 'PendingCartMergeError',
     });
     expect(evaluate).toHaveBeenCalledTimes(1);
@@ -487,6 +489,28 @@ describe('resolvePendingCartMerge', () => {
       expect.any(Function),
       expect.stringContaining('/cart/merge?toMerge=true'),
     );
+  });
+
+  it('discards the pending cart and keeps going when the cart is unchanged', async () => {
+    const items = [cartItem('P_1', 0), cartItem('P_2', 1)];
+    const { evaluate, resolve } = setup(true, items, items);
+
+    await resolve('discard');
+
+    expect(evaluate).toHaveBeenLastCalledWith(
+      expect.any(Function),
+      expect.stringContaining('/cart/merge?toMerge=false'),
+    );
+  });
+
+  it('throws when discarding the pending cart changed the cart', async () => {
+    const { resolve } = setup(true, [cartItem('P_1', 0)], []);
+
+    await expect(resolve('discard')).rejects.toMatchObject({
+      name: 'CartChangedByMergeError',
+      message:
+        'Discarding the pending cart changed the cart, not placing the order: P_1 1→0',
+    });
   });
 
   it('throws when the merge changed the cart', async () => {

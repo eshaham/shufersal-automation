@@ -223,4 +223,5 @@ export interface OrderLookupOptions {
 export interface CreateOrderOptions {
   removeMissingItems: boolean;
   mergePendingCart?: boolean;
+  discardPendingCart?: boolean;
 }
